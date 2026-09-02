@@ -3,14 +3,6 @@ on: [push, pull_request]
 jobs:
   verify:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env: { POSTGRES_PASSWORD: postgres, POSTGRES_DB: courier_platform }
-        ports: ["5432:5432"]
-      redis:
-        image: redis:7
-        ports: ["6379:6379"]
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/courier_platform?schema=public
       REDIS_URL: redis://localhost:6379

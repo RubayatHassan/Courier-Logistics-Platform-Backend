@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   User: 'User',
   RefreshToken: 'RefreshToken',
+  PasswordResetToken: 'PasswordResetToken',
   Merchant: 'Merchant',
   Customer: 'Customer',
   Address: 'Address',
@@ -128,6 +129,7 @@ export const UserScalarFieldEnum = {
   name: 'name',
   role: 'role',
   roleId: 'roleId',
+  emailVerifiedAt: 'emailVerifiedAt',
   merchantId: 'merchantId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -146,6 +148,19 @@ export const RefreshTokenScalarFieldEnum = {
 } as const
 
 export type RefreshTokenScalarFieldEnum = (typeof RefreshTokenScalarFieldEnum)[keyof typeof RefreshTokenScalarFieldEnum]
+
+
+export const PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  codeHash: 'codeHash',
+  expiresAt: 'expiresAt',
+  consumedAt: 'consumedAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
 
 
 export const MerchantScalarFieldEnum = {

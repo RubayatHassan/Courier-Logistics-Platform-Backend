@@ -1,11 +1,23 @@
 import crypto from "node:crypto";
 import cookieParser from "cookie-parser";
+import type { Request, Response } from "express";
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { env } from "../../config/env.js";
 import type { Role } from "../../generated/prisma/client.js";
+import {
+  passwordResetEmail,
+  sendEmail,
+  verificationEmail,
+} from "../../infrastructure/mail.js";
 import { prisma } from "../../infrastructure/prisma.js";
+import {
+  cacheGet,
+  cacheSet,
+  connectRedis,
+  redis,
+} from "../../infrastructure/redis.js";
 import {
   hashPassword,
   revokeRefreshTokens,
@@ -17,13 +29,41 @@ import {
 import { AppError, asyncHandler, ok } from "../../shared/http.js";
 
 const registerSchema = z.object({
-  email: z.email(),
+  email: z.email().transform((value) => value.toLowerCase()),
   password: z.string().min(8),
   name: z.string().min(2),
   phone: z.string().optional(),
   merchantName: z.string().min(2).optional(),
 });
 const loginSchema = z.object({ email: z.email(), password: z.string().min(1) });
+const emailActionSchema = z
+  .object({
+    email: z.email().optional(),
+    code: z
+      .string()
+      .regex(/^\d{6}$/)
+      .optional(),
+    token: z.string().min(20).optional(),
+  })
+  .refine(
+    (input) => input.code || input.token,
+    "A verification code or token is required",
+  );
+const forgotSchema = z.object({ email: z.email() });
+const resetSchema = z
+  .object({
+    password: z.string().min(8),
+    email: z.email().optional(),
+    code: z
+      .string()
+      .regex(/^\d{6}$/)
+      .optional(),
+    token: z.string().min(20).optional(),
+  })
+  .refine(
+    (input) => input.code || input.token,
+    "A reset code or token is required",
+  );
 const publicUser = (user: {
   id: string;
   email: string;
@@ -41,6 +81,73 @@ const publicUser = (user: {
 export const authRouter = Router();
 authRouter.use(cookieParser());
 
+const hashToken = (token: string) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+const generateCode = () => crypto.randomInt(100000, 1000000).toString();
+
+type PendingRegistration = {
+  email: string;
+  name: string;
+  phone?: string;
+  merchantName?: string;
+  passwordHash: string;
+  codeHash: string;
+  tokenHash: string;
+};
+
+const pendingKey = (email: string) =>
+  `pending-registration:${email.toLowerCase()}`;
+const pendingTokenKey = (tokenHash: string) =>
+  `pending-registration-token:${tokenHash}`;
+
+async function issueVerificationEmail(input: {
+  email: string;
+  name: string;
+  phone?: string;
+  merchantName?: string;
+  passwordHash: string;
+}) {
+  await connectRedis();
+  const token = crypto.randomBytes(32).toString("hex");
+  const code = generateCode();
+  const tokenHash = hashToken(token);
+  const pending: PendingRegistration = {
+    ...input,
+    codeHash: await hashPassword(code),
+    tokenHash,
+  };
+  await cacheSet(pendingKey(input.email), pending, 15 * 60);
+  await cacheSet(
+    pendingTokenKey(tokenHash),
+    input.email.toLowerCase(),
+    15 * 60,
+  );
+  const message = verificationEmail(input.name, code, token);
+  await sendEmail(input.email, message.subject, message.html);
+}
+
+async function issuePasswordResetEmail(user: {
+  id: string;
+  name: string;
+  email: string;
+}) {
+  await prisma.passwordResetToken.deleteMany({
+    where: { userId: user.id, consumedAt: null },
+  });
+  const token = crypto.randomBytes(32).toString("hex");
+  const code = generateCode();
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: hashToken(token),
+      codeHash: await hashPassword(code),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    },
+  });
+  const message = passwordResetEmail(user.name, code, token);
+  await sendEmail(user.email, message.subject, message.html);
+}
+
 authRouter.post(
   "/register",
   asyncHandler(async (req, res) => {
@@ -49,48 +156,20 @@ authRouter.post(
       where: { email: input.email },
     });
     if (existing) throw new AppError(409, "Email already registered");
-    const user = await prisma.$transaction(async (tx) => {
-      let merchantId: string | undefined;
-      if (input.merchantName) {
-        const merchant = await tx.merchant.create({
-          data: {
-            name: input.merchantName,
-            slug: `${input.merchantName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${crypto.randomUUID().slice(0, 8)}`,
-            email: input.email,
-            phone: input.phone,
-          },
-        });
-        merchantId = merchant.id;
-      }
-      return tx.user.create({
-        data: {
-          email: input.email,
-          name: input.name,
-          phone: input.phone,
-          passwordHash: await hashPassword(input.password),
-          role: merchantId ? "MERCHANT" : "CUSTOMER",
-          merchantId,
-        },
-      });
+    await issueVerificationEmail({
+      email: input.email,
+      name: input.name,
+      phone: input.phone,
+      merchantName: input.merchantName,
+      passwordHash: await hashPassword(input.password),
     });
-    const authUser = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      merchantId: user.merchantId,
-    };
-    const refreshToken = signRefreshToken(user.id);
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: await hashPassword(refreshToken),
-        expiresAt: new Date(Date.now() + 7 * 86400000),
-      },
-    });
-    setRefreshCookie(res, refreshToken);
     return ok(
       res,
-      { user: publicUser(user), accessToken: signAccessToken(authUser) },
+      {
+        emailVerificationRequired: true,
+        message:
+          "Check your email to verify your account. The account will be created after verification.",
+      },
       201,
     );
   }),
@@ -105,6 +184,8 @@ authRouter.post(
     });
     if (!user || !(await verifyPassword(input.password, user.passwordHash)))
       throw new AppError(401, "Invalid email or password");
+    if (!user.emailVerifiedAt)
+      throw new AppError(403, "Please verify your email before logging in");
     const refreshToken = signRefreshToken(user.id);
     await prisma.refreshToken.create({
       data: {
@@ -124,6 +205,170 @@ authRouter.post(
       }),
     });
   }),
+);
+
+async function verifyEmailAction(req: Request, res: Response) {
+  await connectRedis();
+  const input = emailActionSchema.parse(
+    req.method === "GET" ? req.query : req.body,
+  );
+  let email = input.email?.toLowerCase();
+  if (input.token)
+    email =
+      (await cacheGet<string>(pendingTokenKey(hashToken(input.token)))) ??
+      undefined;
+  if (!email)
+    throw new AppError(400, "Invalid or expired verification code/link");
+  const pending = await cacheGet<PendingRegistration>(pendingKey(email));
+  if (!pending || (input.token && pending.tokenHash !== hashToken(input.token)))
+    throw new AppError(400, "Invalid or expired verification code/link");
+  if (input.code && !(await verifyPassword(input.code, pending.codeHash)))
+    throw new AppError(400, "Invalid or expired verification code/link");
+  const existing = await prisma.user.findUnique({
+    where: { email: pending.email },
+  });
+  if (existing) {
+    await redis.del(pendingKey(email));
+    await redis.del(pendingTokenKey(pending.tokenHash));
+    throw new AppError(409, "Email already registered");
+  }
+  const user = await prisma.$transaction(async (tx) => {
+    let merchantId: string | undefined;
+    if (pending.merchantName) {
+      const merchant = await tx.merchant.create({
+        data: {
+          name: pending.merchantName,
+          slug: `${pending.merchantName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${crypto.randomUUID().slice(0, 8)}`,
+          email: pending.email,
+          phone: pending.phone,
+        },
+      });
+      merchantId = merchant.id;
+    }
+    return tx.user.create({
+      data: {
+        email: pending.email,
+        name: pending.name,
+        phone: pending.phone,
+        passwordHash: pending.passwordHash,
+        role: merchantId ? "MERCHANT" : "CUSTOMER",
+        merchantId,
+        emailVerifiedAt: new Date(),
+      },
+    });
+  });
+  await redis.del(pendingKey(email));
+  await redis.del(pendingTokenKey(pending.tokenHash));
+  return ok(res, {
+    verified: true,
+    user: publicUser(user),
+    message:
+      "Email verified and account created successfully. You can now log in.",
+  });
+}
+
+authRouter.post("/verify-email", asyncHandler(verifyEmailAction));
+authRouter.get("/verify-email", asyncHandler(verifyEmailAction));
+authRouter.post(
+  "/resend-verification",
+  asyncHandler(async (req, res) => {
+    const input = forgotSchema.parse(req.body);
+    const pending = await cacheGet<PendingRegistration>(
+      pendingKey(input.email),
+    );
+    if (pending) await issueVerificationEmail(pending);
+    return ok(res, {
+      message:
+        "If the account exists and is unverified, a verification email has been sent.",
+    });
+  }),
+);
+
+authRouter.post(
+  "/forgot-password",
+  asyncHandler(async (req, res) => {
+    const input = forgotSchema.parse(req.body);
+    const user = await prisma.user.findUnique({
+      where: { email: input.email },
+    });
+    if (user?.emailVerifiedAt) await issuePasswordResetEmail(user);
+    return ok(res, {
+      message:
+        "If an account with that email exists, a password reset link has been sent.",
+    });
+  }),
+);
+
+async function resetPasswordAction(req: Request, res: Response) {
+  const input = resetSchema.parse(req.method === "GET" ? req.query : req.body);
+  let record: { id: string; userId: string } | null = null;
+  if (input.token)
+    record = await prisma.passwordResetToken.findFirst({
+      where: {
+        tokenHash: hashToken(input.token),
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true, userId: true },
+    });
+  else if (input.email && input.code) {
+    const user = await prisma.user.findFirst({
+      where: { email: input.email, emailVerifiedAt: { not: null } },
+    });
+    const candidates = user
+      ? await prisma.passwordResetToken.findMany({
+          where: {
+            userId: user.id,
+            consumedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+        })
+      : [];
+    const code = input.code;
+    const match = code
+      ? (
+          await Promise.all(
+            candidates.map(async (candidate) =>
+              (await verifyPassword(code, candidate.codeHash))
+                ? candidate
+                : null,
+            ),
+          )
+        ).find(Boolean)
+      : null;
+    if (match) record = { id: match.id, userId: match.userId };
+  }
+  if (!record)
+    throw new AppError(400, "Invalid or expired password reset code/link");
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: record.userId },
+      data: { passwordHash: await hashPassword(input.password) },
+    }),
+    prisma.passwordResetToken.update({
+      where: { id: record.id },
+      data: { consumedAt: new Date() },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId: record.userId, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+  return ok(res, {
+    passwordReset: true,
+    message: "Password changed successfully. Please log in again.",
+  });
+}
+
+authRouter.post("/reset-password", asyncHandler(resetPasswordAction));
+authRouter.get(
+  "/reset-password",
+  asyncHandler(async (req, res) =>
+    ok(res, {
+      message: "Submit this token with a new password to reset your password.",
+      token: req.query.token,
+    }),
+  ),
 );
 
 authRouter.post(

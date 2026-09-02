@@ -58,10 +58,12 @@ model User {
   name String
   role Role
   roleId String?
+  emailVerifiedAt DateTime?
   merchantId String?
   merchant Merchant? @relation(fields: [merchantId], references: [id])
   rider Rider?
   refreshTokens RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
   auditLogs AuditLog[]
   addresses UserAddress[]
   sessions UserSession[]
@@ -81,6 +83,18 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   revokedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId, expiresAt])
+}
+
+model PasswordResetToken {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String @unique
+  codeHash String
+  expiresAt DateTime
+  consumedAt DateTime?
   createdAt DateTime @default(now())
   @@index([userId, expiresAt])
 }

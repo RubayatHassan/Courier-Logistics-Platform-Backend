@@ -20,6 +20,7 @@ await prisma.user.upsert({
     name: "Platform Admin",
     role: "ADMIN",
     passwordHash,
+    emailVerifiedAt: new Date(),
   },
 });
 await prisma.user.upsert({
@@ -31,6 +32,7 @@ await prisma.user.upsert({
     role: "MERCHANT",
     merchantId: merchant.id,
     passwordHash,
+    emailVerifiedAt: new Date(),
   },
 });
 const hub = await prisma.hub.upsert({
@@ -51,6 +53,7 @@ const riderUser = await prisma.user.upsert({
     name: "Demo Rider",
     role: "RIDER",
     passwordHash,
+    emailVerifiedAt: new Date(),
   },
 });
 await prisma.rider.upsert({

@@ -13,6 +13,16 @@ const schema = z.object({
   ACCESS_TOKEN_TTL: z.string().default("15m"),
   REFRESH_TOKEN_TTL: z.string().default("7d"),
   CLIENT_ORIGIN: z.string().default("http://localhost:3000"),
+  APP_URL: z.string().url().default("http://localhost:4000"),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().default("Courier Platform <no-reply@example.com>"),
 });
 
 export const env = schema.parse(process.env);
