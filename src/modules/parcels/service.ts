@@ -1,0 +1,107 @@
+import crypto from "node:crypto";
+import type { ParcelStatus } from "../../generated/prisma/client.js";
+import { prisma } from "../../infrastructure/prisma.js";
+import { AppError } from "../../shared/http.js";
+
+const transitions: Record<ParcelStatus, ParcelStatus[]> = {
+  CREATED: ["PICKUP_ASSIGNED", "CANCELLED"],
+  PICKUP_ASSIGNED: ["PICKED_UP", "CANCELLED"],
+  PICKED_UP: ["AT_HUB", "DELIVERY_FAILED"],
+  AT_HUB: ["SORTING", "OUT_FOR_DELIVERY", "LOST_DAMAGED"],
+  SORTING: ["AT_HUB", "OUT_FOR_DELIVERY"],
+  OUT_FOR_DELIVERY: ["DELIVERED", "DELIVERY_FAILED", "RESCHEDULED", "RETURNED"],
+  DELIVERY_FAILED: ["RESCHEDULED", "RETURNED"],
+  RESCHEDULED: ["OUT_FOR_DELIVERY"],
+  DELIVERED: [],
+  CANCELLED: [],
+  RETURNED: [],
+  LOST_DAMAGED: [],
+};
+
+export async function createParcel(input: {
+  merchantId: string;
+  customerId: string;
+  pickupAddress: string;
+  deliveryAddress: string;
+  weightGrams: number;
+  codAmount: number;
+  description?: string;
+  idempotencyKey?: string;
+}) {
+  if (input.idempotencyKey) {
+    const existing = await prisma.parcel.findFirst({
+      where: {
+        merchantId: input.merchantId,
+        idempotencyKey: input.idempotencyKey,
+      },
+    });
+    if (existing) return existing;
+  }
+  const deliveryCharge = Math.max(
+    60,
+    60 + Math.ceil(Math.max(0, input.weightGrams - 1000) / 1000) * 20,
+  );
+  const trackingNumber = `CLP${Date.now().toString(36).toUpperCase()}${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
+  return prisma.$transaction(async (tx) => {
+    const parcel = await tx.parcel.create({
+      data: {
+        ...input,
+        trackingNumber,
+        deliveryCharge,
+        codAmount: input.codAmount,
+        status: "CREATED",
+      },
+    });
+    await tx.trackingEvent.create({
+      data: { parcelId: parcel.id, status: "CREATED", note: "Parcel booked" },
+    });
+    await tx.payment.create({
+      data: {
+        parcelId: parcel.id,
+        amount: input.codAmount,
+        method: input.codAmount > 0 ? "COD" : "ONLINE",
+      },
+    });
+    return parcel;
+  });
+}
+
+export async function transitionParcel(
+  id: string,
+  merchantId: string | null,
+  status: ParcelStatus,
+  actorId: string,
+  note?: string,
+) {
+  const parcel = await prisma.parcel.findFirst({
+    where: { id, ...(merchantId ? { merchantId } : {}) },
+  });
+  if (!parcel) throw new AppError(404, "Parcel not found");
+  if (!(transitions[parcel.status] ?? []).includes(status))
+    throw new AppError(
+      409,
+      `Cannot move parcel from ${parcel.status} to ${status}`,
+    );
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.parcel.update({
+      where: { id },
+      data: {
+        status,
+        deliveredAt: status === "DELIVERED" ? new Date() : undefined,
+      },
+    });
+    await tx.trackingEvent.create({
+      data: { parcelId: id, status, actorId, note },
+    });
+    if (status === "DELIVERED" && Number(parcel.codAmount) > 0)
+      await tx.codLedger.create({
+        data: {
+          merchantId: parcel.merchantId,
+          parcelId: id,
+          entryType: "COD_COLLECTED",
+          amount: parcel.codAmount,
+        },
+      });
+    return updated;
+  });
+}
