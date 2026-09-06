@@ -286,6 +286,7 @@ model Payment {
   shipment Shipment? @relation(fields: [shipmentId], references: [id])
   createdAt DateTime @default(now())
   @@index([parcelId, status])
+  @@index([providerReference, status])
   refunds Refund[]
 }
 
