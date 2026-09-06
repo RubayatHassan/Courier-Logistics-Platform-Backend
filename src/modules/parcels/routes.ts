@@ -5,6 +5,7 @@ import { cacheGet, cacheSet } from "../../infrastructure/redis.js";
 import { authenticate, authorize } from "../../middleware/auth.js";
 import { AppError, asyncHandler, ok } from "../../shared/http.js";
 import type { AuthenticatedRequest } from "../../shared/types.js";
+import { parseInput } from "../../shared/validation.js";
 import { createParcel, transitionParcel } from "./service.js";
 
 const createSchema = z.object({
@@ -115,7 +116,7 @@ parcelRouter.post(
     const user = (req as AuthenticatedRequest).user;
     if (!user) throw new AppError(401, "Authentication required");
     if (!user.merchantId) throw new AppError(400, "Merchant context required");
-    const input = createSchema.parse(req.body);
+    const input = parseInput(createSchema, req.body);
     const customer = await prisma.customer.findFirst({
       where: { id: input.customerId, merchantId: user.merchantId },
     });
