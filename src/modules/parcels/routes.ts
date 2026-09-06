@@ -46,6 +46,11 @@ const parcelStatusQuery = z.enum([
   "RETURNED",
   "LOST_DAMAGED",
 ]);
+const listQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: parcelStatusQuery.optional(),
+});
 export const parcelRouter = Router();
 
 parcelRouter.get(
@@ -82,12 +87,7 @@ parcelRouter.get(
   asyncHandler(async (req, res) => {
     const user = (req as AuthenticatedRequest).user;
     if (!user) throw new AppError(401, "Authentication required");
-    const page = Math.max(1, Number(req.query.page ?? 1));
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit ?? 20)));
-    const status =
-      typeof req.query.status === "string"
-        ? parcelStatusQuery.parse(req.query.status)
-        : undefined;
+    const { page, limit, status } = parseInput(listQuerySchema, req.query);
     const where = {
       ...(user.merchantId ? { merchantId: user.merchantId } : {}),
       ...(status ? { status } : {}),
