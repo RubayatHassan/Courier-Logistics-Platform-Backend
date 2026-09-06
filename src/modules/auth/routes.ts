@@ -27,6 +27,7 @@ import {
   verifyPassword,
 } from "../../middleware/auth.js";
 import { AppError, asyncHandler, ok } from "../../shared/http.js";
+import { parseInput } from "../../shared/validation.js";
 
 const registerSchema = z.object({
   email: z.email().transform((value) => value.toLowerCase()),
@@ -179,7 +180,7 @@ authRouter.post(
 authRouter.post(
   "/login",
   asyncHandler(async (req, res) => {
-    const input = loginSchema.parse(req.body);
+    const input = parseInput(loginSchema, req.body);
     const user = await prisma.user.findUnique({
       where: { email: input.email },
     });
@@ -211,7 +212,7 @@ authRouter.post(
 authRouter.post(
   "/google",
   asyncHandler(async (req, res) => {
-    const input = googleSchema.parse(req.body);
+    const input = parseInput(googleSchema, req.body);
     if (!env.GOOGLE_CLIENT_ID) throw new AppError(503, "Google login is not configured");
     const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(input.credential)}`);
     if (!response.ok) throw new AppError(401, "Invalid Google credential");
