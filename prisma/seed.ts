@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../src/infrastructure/prisma.js";
 
 const passwordHash = await bcrypt.hash("Password123!", 12);
+for (const [name, description] of [["ADMIN", "Platform administrator"], ["MERCHANT", "Merchant operator"], ["RIDER", "Delivery rider"]] as const)
+  await prisma.roleRecord.upsert({ where: { name }, update: { description }, create: { name, description } });
 const merchant = await prisma.merchant.upsert({
   where: { slug: "demo-merchant" },
   update: {},
