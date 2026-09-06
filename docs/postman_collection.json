@@ -1,0 +1,27 @@
+{
+  "info": { "name": "Courier & Logistics Platform API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "trackingNumber", "value": "CLP..." },
+    { "key": "parcelId", "value": "" }
+  ],
+  "item": [
+    { "name": "Auth", "item": [
+      { "name": "Register", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"merchant@example.com\",\"password\":\"Password123!\",\"name\":\"Demo Merchant\",\"merchantName\":\"Demo Store\"}" }, "url": "{{baseUrl}}/auth/register" } },
+      { "name": "Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"email\":\"admin@example.com\",\"password\":\"Password123!\"}" }, "url": "{{baseUrl}}/auth/login" } },
+      { "name": "Google Login", "request": { "method": "POST", "body": { "mode": "raw", "raw": "{\"credential\":\"<Google ID token>\"}" }, "url": "{{baseUrl}}/auth/google" } },
+      { "name": "Refresh", "request": { "method": "POST", "url": "{{baseUrl}}/auth/refresh" } },
+      { "name": "Logout", "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" } }
+    ] },
+    { "name": "Parcels", "item": [
+      { "name": "List parcels", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/parcels?page=1&limit=20" } },
+      { "name": "Create parcel", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }, { "key": "Idempotency-Key", "value": "booking-001" }], "body": { "mode": "raw", "raw": "{\"customerId\":\"<customer uuid>\",\"pickupAddress\":\"Motijheel, Dhaka\",\"deliveryAddress\":\"Gulshan, Dhaka\",\"weightGrams\":1200,\"codAmount\":500}" }, "url": "{{baseUrl}}/parcels" } },
+      { "name": "Track parcel", "request": { "method": "GET", "url": "{{baseUrl}}/parcels/track/{{trackingNumber}}" } },
+      { "name": "Update status", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"status\":\"PICKUP_ASSIGNED\",\"note\":\"Rider assigned\"}" }, "url": "{{baseUrl}}/parcels/{{parcelId}}/status" } }
+    ] },
+    { "name": "Payments", "item": [
+      { "name": "Create Stripe Checkout", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"parcelId\":\"{{parcelId}}\"}" }, "url": "{{baseUrl}}/payments/stripe/checkout" } }
+    ] }
+  ]
+}
