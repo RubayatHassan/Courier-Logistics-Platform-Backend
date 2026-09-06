@@ -23,6 +23,11 @@ const schema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   MAIL_FROM: z.string().default("Courier Platform <no-reply@example.com>"),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_SUCCESS_URL: z.string().url().default("http://localhost:3000/payment/success"),
+  STRIPE_CANCEL_URL: z.string().url().default("http://localhost:3000/payment/cancel"),
 });
 
 export const env = schema.parse(process.env);
