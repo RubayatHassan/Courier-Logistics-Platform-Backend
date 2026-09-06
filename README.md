@@ -14,7 +14,7 @@ The Prisma schema also contains the full relational ERD layer: users/roles/sessi
 6. Seed demo users: `npm run db:seed`.
 7. Start API: `npm run dev`.
 
-The API is available at `http://localhost:4000`. OpenAPI JSON is at `/api/v1/openapi.json`.
+The API is available at `http://localhost:4000`. OpenAPI JSON is at `/api/v1/openapi.json`, and an importable Postman collection is at `docs/postman_collection.json`.
 
 ## Email authentication
 
@@ -46,6 +46,12 @@ After changing `prisma/schema.prisma`, run `npx prisma migrate dev --name <chang
 
 Demo password: `Password123!` for the seeded accounts. Never use it outside local development.
 
+Demo administrator: `admin@example.com` / `Password123!`. The seed also creates `merchant@example.com` and `rider@example.com` with the same local-only password.
+
+Google Cloud login requires a Google OAuth web client ID in `GOOGLE_CLIENT_ID`. The API verifies the Google ID token against Google's tokeninfo endpoint before creating or signing in the customer.
+
+Stripe checkout requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Checkout sessions are created against Stripe's live API (test keys are recommended for evaluation), and only signed `checkout.session.completed` webhooks mark a payment as paid. There are no simulated payment success paths.
+
 ## API conventions
 
-Use `Authorization: Bearer <accessToken>` for authenticated endpoints. Merchant parcel creation accepts an `Idempotency-Key` header. Public tracking is available at `/api/v1/parcels/track/:trackingNumber`.
+Use `Authorization: Bearer <accessToken>` for authenticated endpoints. Every response uses `{ success, message, data }` on success and `{ success, message, errors }` on errors. Merchant parcel creation accepts an `Idempotency-Key` header. Public tracking is available at `/api/v1/parcels/track/:trackingNumber`.
