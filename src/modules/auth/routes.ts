@@ -36,6 +36,7 @@ const registerSchema = z.object({
   merchantName: z.string().min(2).optional(),
 });
 const loginSchema = z.object({ email: z.email(), password: z.string().min(1) });
+const googleSchema = z.object({ credential: z.string().min(20) });
 const emailActionSchema = z
   .object({
     email: z.email().optional(),
@@ -204,6 +205,30 @@ authRouter.post(
         merchantId: user.merchantId,
       }),
     });
+  }),
+);
+
+authRouter.post(
+  "/google",
+  asyncHandler(async (req, res) => {
+    const input = googleSchema.parse(req.body);
+    if (!env.GOOGLE_CLIENT_ID) throw new AppError(503, "Google login is not configured");
+    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(input.credential)}`);
+    if (!response.ok) throw new AppError(401, "Invalid Google credential");
+    const profile = (await response.json()) as { sub?: string; email?: string; name?: string; aud?: string; email_verified?: string };
+    if (!profile.sub || !profile.email || profile.aud !== env.GOOGLE_CLIENT_ID || profile.email_verified !== "true")
+      throw new AppError(401, "Google account could not be verified");
+    const googleId = profile.sub;
+    const email = profile.email.toLowerCase();
+    const user = await prisma.user.upsert({
+      where: { googleId },
+      update: { ...(profile.name ? { name: profile.name } : {}), emailVerifiedAt: new Date() },
+      create: { googleId, email, name: profile.name ?? email.split("@")[0] ?? "Google user", passwordHash: await hashPassword(crypto.randomBytes(32).toString("hex")), role: "CUSTOMER", emailVerifiedAt: new Date() },
+    });
+    const refreshToken = signRefreshToken(user.id);
+    await prisma.refreshToken.create({ data: { userId: user.id, tokenHash: await hashPassword(refreshToken), expiresAt: new Date(Date.now() + 7 * 86400000) } });
+    setRefreshCookie(res, refreshToken);
+    return ok(res, { user: publicUser(user), accessToken: signAccessToken({ id: user.id, email: user.email, role: user.role, merchantId: user.merchantId }) });
   }),
 );
 
