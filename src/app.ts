@@ -5,9 +5,12 @@ import { notFound, registerCoreMiddleware } from "./middleware/core.js";
 import { authRouter } from "./modules/auth/routes.js";
 import { parcelRouter } from "./modules/parcels/routes.js";
 import { errorHandler, ok } from "./shared/http.js";
+import { openApiDocument } from "./docs/openapi.js";
+import { paymentRouter } from "./modules/payments/routes.js";
 
 export const app = express();
 registerCoreMiddleware(app);
+app.use("/api/v1/payments/stripe/webhook", express.raw({ type: "application/json" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
@@ -21,28 +24,15 @@ app.get("/ready", async (_req, res) => {
   } catch {
     return res
       .status(503)
-      .json({ success: false, error: { message: "Database unavailable" } });
+      .json({ success: false, message: "Database unavailable", errors: [] });
   }
 });
 app.get("/api/v1/openapi.json", (_req, res) =>
-  res.json({
-    openapi: "3.0.3",
-    info: { title: "Courier Logistics API", version: "1.0.0" },
-    servers: [{ url: "/api/v1" }],
-    paths: {
-      "/auth/login": { post: { summary: "Login" } },
-      "/parcels": {
-        get: { summary: "List parcels" },
-        post: { summary: "Create parcel" },
-      },
-      "/parcels/track/{trackingNumber}": {
-        get: { summary: "Public tracking" },
-      },
-    },
-  }),
+  res.json(openApiDocument),
 );
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/parcels", parcelRouter);
+app.use("/api/v1/payments", paymentRouter);
 app.use(notFound);
 app.use(errorHandler);
