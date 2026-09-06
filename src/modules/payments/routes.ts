@@ -3,14 +3,14 @@ import { Router } from "express";
 import { z } from "zod";
 import { env } from "../../config/env.js";
 import { prisma } from "../../infrastructure/prisma.js";
-import { authenticate } from "../../middleware/auth.js";
+import { authenticate, authorize } from "../../middleware/auth.js";
 import { AppError, asyncHandler, ok } from "../../shared/http.js";
 import type { AuthenticatedRequest } from "../../shared/types.js";
 
 const checkoutSchema = z.object({ parcelId: z.uuid() });
 export const paymentRouter = Router();
 
-paymentRouter.post("/stripe/checkout", authenticate, asyncHandler(async (req, res) => {
+paymentRouter.post("/stripe/checkout", authenticate, authorize("MERCHANT", "ADMIN"), asyncHandler(async (req, res) => {
   const { parcelId } = checkoutSchema.parse(req.body);
   if (!env.STRIPE_SECRET_KEY) throw new AppError(503, "Stripe payments are not configured");
   const user = (req as AuthenticatedRequest).user;
