@@ -55,3 +55,13 @@ Stripe checkout requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Checko
 ## API conventions
 
 Use `Authorization: Bearer <accessToken>` for authenticated endpoints. Every response uses `{ success, message, data }` on success and `{ success, message, errors }` on errors. Merchant parcel creation accepts an `Idempotency-Key` header. Public tracking is available at `/api/v1/parcels/track/:trackingNumber`.
+
+Example error response:
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [{ "path": ["weightGrams"], "message": "Too small: expected number to be >0" }]
+}
+```
