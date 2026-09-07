@@ -28,8 +28,7 @@ try {
 try {
   await ensureSuperAdmin();
 } catch (error) {
-  console.error("Super admin bootstrap failed", error);
-  process.exit(1);
+  console.warn("Super admin bootstrap skipped; database unavailable", error);
 }
 app.listen(env.PORT, () =>
   console.log(`Courier platform API listening on port ${env.PORT}`),
