@@ -14,7 +14,10 @@ const transporter = env.SMTP_HOST
   : null;
 
 export async function sendEmail(to: string, subject: string, html: string) {
-  if (!transporter) throw new Error("SMTP is not configured");
+  if (!transporter) {
+    console.info(`[dev-mail] from=${env.MAIL_FROM} to=${to} subject=${subject}\n${html}`);
+    return;
+  }
   await transporter.sendMail({ from: env.MAIL_FROM, to, subject, html });
 }
 

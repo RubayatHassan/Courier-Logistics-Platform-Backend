@@ -20,7 +20,9 @@ The API is available at `http://localhost:4000`. An importable Postman collectio
 
 Registration does not log the user in immediately. The account remains unverified until the emailed six-digit code or verification link is submitted to `/api/v1/auth/verify-email`. Login is blocked for unverified users.
 
-Configure a real SMTP provider in `.env`:
+SMTP is optional for local development. Without SMTP, verification and reset messages are printed as `[dev-mail]` previews in the backend console; Redis still expires verification data after 15 minutes. `MAIL_FROM` is used in the preview and by SMTP when configured.
+
+If real email delivery is needed, configure an SMTP provider in `.env`:
 
 ```env
 APP_URL=http://localhost:4000

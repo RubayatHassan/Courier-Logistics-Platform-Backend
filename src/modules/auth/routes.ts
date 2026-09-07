@@ -29,9 +29,10 @@ import {
 import { AppError, asyncHandler, ok } from "../../shared/http.js";
 import { parseInput } from "../../shared/validation.js";
 
+const passwordSchema = z.string().min(8, "Password must be at least 8 characters");
 const registerSchema = z.object({
   email: z.email().transform((value) => value.toLowerCase()),
-  password: z.string().min(8),
+  password: passwordSchema,
   name: z.string().min(2),
   phone: z.string().optional(),
   merchantName: z.string().min(2).optional(),
@@ -54,7 +55,7 @@ const emailActionSchema = z
 const forgotSchema = z.object({ email: z.email() });
 const resetSchema = z
   .object({
-    password: z.string().min(8),
+    password: passwordSchema,
     email: z.email().optional(),
     code: z
       .string()
