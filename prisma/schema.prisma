@@ -20,6 +20,7 @@ enum ParcelStatus {
   PICKUP_ASSIGNED
   PICKED_UP
   AT_HUB
+  IN_TRANSIT
   SORTING
   OUT_FOR_DELIVERY
   DELIVERED
@@ -270,7 +271,10 @@ model HubTransfer {
   fromHub Hub? @relation("FromHub", fields: [fromHubId], references: [id])
   toHubId String
   toHub Hub @relation("ToHub", fields: [toHubId], references: [id])
+  vehicleId String?
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
   transferredAt DateTime @default(now())
+  @@index([toHubId, transferredAt])
 }
 
 model Payment {
@@ -525,6 +529,7 @@ model Vehicle {
   isActive Boolean @default(true)
   assignments Assignment[]
   legacyAssignments DeliveryAssignment[]
+  hubTransfers HubTransfer[]
 }
 
 model Location {

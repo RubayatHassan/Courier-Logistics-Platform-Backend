@@ -29,6 +29,7 @@ export type HubTransferMinAggregateOutputType = {
   parcelId: string | null
   fromHubId: string | null
   toHubId: string | null
+  vehicleId: string | null
   transferredAt: Date | null
 }
 
@@ -37,6 +38,7 @@ export type HubTransferMaxAggregateOutputType = {
   parcelId: string | null
   fromHubId: string | null
   toHubId: string | null
+  vehicleId: string | null
   transferredAt: Date | null
 }
 
@@ -45,6 +47,7 @@ export type HubTransferCountAggregateOutputType = {
   parcelId: number
   fromHubId: number
   toHubId: number
+  vehicleId: number
   transferredAt: number
   _all: number
 }
@@ -55,6 +58,7 @@ export type HubTransferMinAggregateInputType = {
   parcelId?: true
   fromHubId?: true
   toHubId?: true
+  vehicleId?: true
   transferredAt?: true
 }
 
@@ -63,6 +67,7 @@ export type HubTransferMaxAggregateInputType = {
   parcelId?: true
   fromHubId?: true
   toHubId?: true
+  vehicleId?: true
   transferredAt?: true
 }
 
@@ -71,6 +76,7 @@ export type HubTransferCountAggregateInputType = {
   parcelId?: true
   fromHubId?: true
   toHubId?: true
+  vehicleId?: true
   transferredAt?: true
   _all?: true
 }
@@ -152,6 +158,7 @@ export type HubTransferGroupByOutputType = {
   parcelId: string
   fromHubId: string | null
   toHubId: string
+  vehicleId: string | null
   transferredAt: Date
   _count: HubTransferCountAggregateOutputType | null
   _min: HubTransferMinAggregateOutputType | null
@@ -181,10 +188,12 @@ export type HubTransferWhereInput = {
   parcelId?: Prisma.StringFilter<"HubTransfer"> | string
   fromHubId?: Prisma.StringNullableFilter<"HubTransfer"> | string | null
   toHubId?: Prisma.StringFilter<"HubTransfer"> | string
+  vehicleId?: Prisma.StringNullableFilter<"HubTransfer"> | string | null
   transferredAt?: Prisma.DateTimeFilter<"HubTransfer"> | Date | string
   parcel?: Prisma.XOR<Prisma.ParcelScalarRelationFilter, Prisma.ParcelWhereInput>
   fromHub?: Prisma.XOR<Prisma.HubNullableScalarRelationFilter, Prisma.HubWhereInput> | null
   toHub?: Prisma.XOR<Prisma.HubScalarRelationFilter, Prisma.HubWhereInput>
+  vehicle?: Prisma.XOR<Prisma.VehicleNullableScalarRelationFilter, Prisma.VehicleWhereInput> | null
 }
 
 export type HubTransferOrderByWithRelationInput = {
@@ -192,10 +201,12 @@ export type HubTransferOrderByWithRelationInput = {
   parcelId?: Prisma.SortOrder
   fromHubId?: Prisma.SortOrderInput | Prisma.SortOrder
   toHubId?: Prisma.SortOrder
+  vehicleId?: Prisma.SortOrderInput | Prisma.SortOrder
   transferredAt?: Prisma.SortOrder
   parcel?: Prisma.ParcelOrderByWithRelationInput
   fromHub?: Prisma.HubOrderByWithRelationInput
   toHub?: Prisma.HubOrderByWithRelationInput
+  vehicle?: Prisma.VehicleOrderByWithRelationInput
 }
 
 export type HubTransferWhereUniqueInput = Prisma.AtLeast<{
@@ -206,10 +217,12 @@ export type HubTransferWhereUniqueInput = Prisma.AtLeast<{
   parcelId?: Prisma.StringFilter<"HubTransfer"> | string
   fromHubId?: Prisma.StringNullableFilter<"HubTransfer"> | string | null
   toHubId?: Prisma.StringFilter<"HubTransfer"> | string
+  vehicleId?: Prisma.StringNullableFilter<"HubTransfer"> | string | null
   transferredAt?: Prisma.DateTimeFilter<"HubTransfer"> | Date | string
   parcel?: Prisma.XOR<Prisma.ParcelScalarRelationFilter, Prisma.ParcelWhereInput>
   fromHub?: Prisma.XOR<Prisma.HubNullableScalarRelationFilter, Prisma.HubWhereInput> | null
   toHub?: Prisma.XOR<Prisma.HubScalarRelationFilter, Prisma.HubWhereInput>
+  vehicle?: Prisma.XOR<Prisma.VehicleNullableScalarRelationFilter, Prisma.VehicleWhereInput> | null
 }, "id">
 
 export type HubTransferOrderByWithAggregationInput = {
@@ -217,6 +230,7 @@ export type HubTransferOrderByWithAggregationInput = {
   parcelId?: Prisma.SortOrder
   fromHubId?: Prisma.SortOrderInput | Prisma.SortOrder
   toHubId?: Prisma.SortOrder
+  vehicleId?: Prisma.SortOrderInput | Prisma.SortOrder
   transferredAt?: Prisma.SortOrder
   _count?: Prisma.HubTransferCountOrderByAggregateInput
   _max?: Prisma.HubTransferMaxOrderByAggregateInput
@@ -231,6 +245,7 @@ export type HubTransferScalarWhereWithAggregatesInput = {
   parcelId?: Prisma.StringWithAggregatesFilter<"HubTransfer"> | string
   fromHubId?: Prisma.StringNullableWithAggregatesFilter<"HubTransfer"> | string | null
   toHubId?: Prisma.StringWithAggregatesFilter<"HubTransfer"> | string
+  vehicleId?: Prisma.StringNullableWithAggregatesFilter<"HubTransfer"> | string | null
   transferredAt?: Prisma.DateTimeWithAggregatesFilter<"HubTransfer"> | Date | string
 }
 
@@ -240,6 +255,7 @@ export type HubTransferCreateInput = {
   parcel: Prisma.ParcelCreateNestedOneWithoutTransfersInput
   fromHub?: Prisma.HubCreateNestedOneWithoutFromTransfersInput
   toHub: Prisma.HubCreateNestedOneWithoutToTransfersInput
+  vehicle?: Prisma.VehicleCreateNestedOneWithoutHubTransfersInput
 }
 
 export type HubTransferUncheckedCreateInput = {
@@ -247,6 +263,7 @@ export type HubTransferUncheckedCreateInput = {
   parcelId: string
   fromHubId?: string | null
   toHubId: string
+  vehicleId?: string | null
   transferredAt?: Date | string
 }
 
@@ -256,6 +273,7 @@ export type HubTransferUpdateInput = {
   parcel?: Prisma.ParcelUpdateOneRequiredWithoutTransfersNestedInput
   fromHub?: Prisma.HubUpdateOneWithoutFromTransfersNestedInput
   toHub?: Prisma.HubUpdateOneRequiredWithoutToTransfersNestedInput
+  vehicle?: Prisma.VehicleUpdateOneWithoutHubTransfersNestedInput
 }
 
 export type HubTransferUncheckedUpdateInput = {
@@ -263,6 +281,7 @@ export type HubTransferUncheckedUpdateInput = {
   parcelId?: Prisma.StringFieldUpdateOperationsInput | string
   fromHubId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   toHubId?: Prisma.StringFieldUpdateOperationsInput | string
+  vehicleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -271,6 +290,7 @@ export type HubTransferCreateManyInput = {
   parcelId: string
   fromHubId?: string | null
   toHubId: string
+  vehicleId?: string | null
   transferredAt?: Date | string
 }
 
@@ -284,6 +304,7 @@ export type HubTransferUncheckedUpdateManyInput = {
   parcelId?: Prisma.StringFieldUpdateOperationsInput | string
   fromHubId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   toHubId?: Prisma.StringFieldUpdateOperationsInput | string
+  vehicleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -302,6 +323,7 @@ export type HubTransferCountOrderByAggregateInput = {
   parcelId?: Prisma.SortOrder
   fromHubId?: Prisma.SortOrder
   toHubId?: Prisma.SortOrder
+  vehicleId?: Prisma.SortOrder
   transferredAt?: Prisma.SortOrder
 }
 
@@ -310,6 +332,7 @@ export type HubTransferMaxOrderByAggregateInput = {
   parcelId?: Prisma.SortOrder
   fromHubId?: Prisma.SortOrder
   toHubId?: Prisma.SortOrder
+  vehicleId?: Prisma.SortOrder
   transferredAt?: Prisma.SortOrder
 }
 
@@ -318,6 +341,7 @@ export type HubTransferMinOrderByAggregateInput = {
   parcelId?: Prisma.SortOrder
   fromHubId?: Prisma.SortOrder
   toHubId?: Prisma.SortOrder
+  vehicleId?: Prisma.SortOrder
   transferredAt?: Prisma.SortOrder
 }
 
@@ -447,17 +471,61 @@ export type HubTransferUncheckedUpdateManyWithoutParcelNestedInput = {
   deleteMany?: Prisma.HubTransferScalarWhereInput | Prisma.HubTransferScalarWhereInput[]
 }
 
+export type HubTransferCreateNestedManyWithoutVehicleInput = {
+  create?: Prisma.XOR<Prisma.HubTransferCreateWithoutVehicleInput, Prisma.HubTransferUncheckedCreateWithoutVehicleInput> | Prisma.HubTransferCreateWithoutVehicleInput[] | Prisma.HubTransferUncheckedCreateWithoutVehicleInput[]
+  connectOrCreate?: Prisma.HubTransferCreateOrConnectWithoutVehicleInput | Prisma.HubTransferCreateOrConnectWithoutVehicleInput[]
+  createMany?: Prisma.HubTransferCreateManyVehicleInputEnvelope
+  connect?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+}
+
+export type HubTransferUncheckedCreateNestedManyWithoutVehicleInput = {
+  create?: Prisma.XOR<Prisma.HubTransferCreateWithoutVehicleInput, Prisma.HubTransferUncheckedCreateWithoutVehicleInput> | Prisma.HubTransferCreateWithoutVehicleInput[] | Prisma.HubTransferUncheckedCreateWithoutVehicleInput[]
+  connectOrCreate?: Prisma.HubTransferCreateOrConnectWithoutVehicleInput | Prisma.HubTransferCreateOrConnectWithoutVehicleInput[]
+  createMany?: Prisma.HubTransferCreateManyVehicleInputEnvelope
+  connect?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+}
+
+export type HubTransferUpdateManyWithoutVehicleNestedInput = {
+  create?: Prisma.XOR<Prisma.HubTransferCreateWithoutVehicleInput, Prisma.HubTransferUncheckedCreateWithoutVehicleInput> | Prisma.HubTransferCreateWithoutVehicleInput[] | Prisma.HubTransferUncheckedCreateWithoutVehicleInput[]
+  connectOrCreate?: Prisma.HubTransferCreateOrConnectWithoutVehicleInput | Prisma.HubTransferCreateOrConnectWithoutVehicleInput[]
+  upsert?: Prisma.HubTransferUpsertWithWhereUniqueWithoutVehicleInput | Prisma.HubTransferUpsertWithWhereUniqueWithoutVehicleInput[]
+  createMany?: Prisma.HubTransferCreateManyVehicleInputEnvelope
+  set?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+  disconnect?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+  delete?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+  connect?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+  update?: Prisma.HubTransferUpdateWithWhereUniqueWithoutVehicleInput | Prisma.HubTransferUpdateWithWhereUniqueWithoutVehicleInput[]
+  updateMany?: Prisma.HubTransferUpdateManyWithWhereWithoutVehicleInput | Prisma.HubTransferUpdateManyWithWhereWithoutVehicleInput[]
+  deleteMany?: Prisma.HubTransferScalarWhereInput | Prisma.HubTransferScalarWhereInput[]
+}
+
+export type HubTransferUncheckedUpdateManyWithoutVehicleNestedInput = {
+  create?: Prisma.XOR<Prisma.HubTransferCreateWithoutVehicleInput, Prisma.HubTransferUncheckedCreateWithoutVehicleInput> | Prisma.HubTransferCreateWithoutVehicleInput[] | Prisma.HubTransferUncheckedCreateWithoutVehicleInput[]
+  connectOrCreate?: Prisma.HubTransferCreateOrConnectWithoutVehicleInput | Prisma.HubTransferCreateOrConnectWithoutVehicleInput[]
+  upsert?: Prisma.HubTransferUpsertWithWhereUniqueWithoutVehicleInput | Prisma.HubTransferUpsertWithWhereUniqueWithoutVehicleInput[]
+  createMany?: Prisma.HubTransferCreateManyVehicleInputEnvelope
+  set?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+  disconnect?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+  delete?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+  connect?: Prisma.HubTransferWhereUniqueInput | Prisma.HubTransferWhereUniqueInput[]
+  update?: Prisma.HubTransferUpdateWithWhereUniqueWithoutVehicleInput | Prisma.HubTransferUpdateWithWhereUniqueWithoutVehicleInput[]
+  updateMany?: Prisma.HubTransferUpdateManyWithWhereWithoutVehicleInput | Prisma.HubTransferUpdateManyWithWhereWithoutVehicleInput[]
+  deleteMany?: Prisma.HubTransferScalarWhereInput | Prisma.HubTransferScalarWhereInput[]
+}
+
 export type HubTransferCreateWithoutFromHubInput = {
   id?: string
   transferredAt?: Date | string
   parcel: Prisma.ParcelCreateNestedOneWithoutTransfersInput
   toHub: Prisma.HubCreateNestedOneWithoutToTransfersInput
+  vehicle?: Prisma.VehicleCreateNestedOneWithoutHubTransfersInput
 }
 
 export type HubTransferUncheckedCreateWithoutFromHubInput = {
   id?: string
   parcelId: string
   toHubId: string
+  vehicleId?: string | null
   transferredAt?: Date | string
 }
 
@@ -476,12 +544,14 @@ export type HubTransferCreateWithoutToHubInput = {
   transferredAt?: Date | string
   parcel: Prisma.ParcelCreateNestedOneWithoutTransfersInput
   fromHub?: Prisma.HubCreateNestedOneWithoutFromTransfersInput
+  vehicle?: Prisma.VehicleCreateNestedOneWithoutHubTransfersInput
 }
 
 export type HubTransferUncheckedCreateWithoutToHubInput = {
   id?: string
   parcelId: string
   fromHubId?: string | null
+  vehicleId?: string | null
   transferredAt?: Date | string
 }
 
@@ -519,6 +589,7 @@ export type HubTransferScalarWhereInput = {
   parcelId?: Prisma.StringFilter<"HubTransfer"> | string
   fromHubId?: Prisma.StringNullableFilter<"HubTransfer"> | string | null
   toHubId?: Prisma.StringFilter<"HubTransfer"> | string
+  vehicleId?: Prisma.StringNullableFilter<"HubTransfer"> | string | null
   transferredAt?: Prisma.DateTimeFilter<"HubTransfer"> | Date | string
 }
 
@@ -543,12 +614,14 @@ export type HubTransferCreateWithoutParcelInput = {
   transferredAt?: Date | string
   fromHub?: Prisma.HubCreateNestedOneWithoutFromTransfersInput
   toHub: Prisma.HubCreateNestedOneWithoutToTransfersInput
+  vehicle?: Prisma.VehicleCreateNestedOneWithoutHubTransfersInput
 }
 
 export type HubTransferUncheckedCreateWithoutParcelInput = {
   id?: string
   fromHubId?: string | null
   toHubId: string
+  vehicleId?: string | null
   transferredAt?: Date | string
 }
 
@@ -578,10 +651,53 @@ export type HubTransferUpdateManyWithWhereWithoutParcelInput = {
   data: Prisma.XOR<Prisma.HubTransferUpdateManyMutationInput, Prisma.HubTransferUncheckedUpdateManyWithoutParcelInput>
 }
 
+export type HubTransferCreateWithoutVehicleInput = {
+  id?: string
+  transferredAt?: Date | string
+  parcel: Prisma.ParcelCreateNestedOneWithoutTransfersInput
+  fromHub?: Prisma.HubCreateNestedOneWithoutFromTransfersInput
+  toHub: Prisma.HubCreateNestedOneWithoutToTransfersInput
+}
+
+export type HubTransferUncheckedCreateWithoutVehicleInput = {
+  id?: string
+  parcelId: string
+  fromHubId?: string | null
+  toHubId: string
+  transferredAt?: Date | string
+}
+
+export type HubTransferCreateOrConnectWithoutVehicleInput = {
+  where: Prisma.HubTransferWhereUniqueInput
+  create: Prisma.XOR<Prisma.HubTransferCreateWithoutVehicleInput, Prisma.HubTransferUncheckedCreateWithoutVehicleInput>
+}
+
+export type HubTransferCreateManyVehicleInputEnvelope = {
+  data: Prisma.HubTransferCreateManyVehicleInput | Prisma.HubTransferCreateManyVehicleInput[]
+  skipDuplicates?: boolean
+}
+
+export type HubTransferUpsertWithWhereUniqueWithoutVehicleInput = {
+  where: Prisma.HubTransferWhereUniqueInput
+  update: Prisma.XOR<Prisma.HubTransferUpdateWithoutVehicleInput, Prisma.HubTransferUncheckedUpdateWithoutVehicleInput>
+  create: Prisma.XOR<Prisma.HubTransferCreateWithoutVehicleInput, Prisma.HubTransferUncheckedCreateWithoutVehicleInput>
+}
+
+export type HubTransferUpdateWithWhereUniqueWithoutVehicleInput = {
+  where: Prisma.HubTransferWhereUniqueInput
+  data: Prisma.XOR<Prisma.HubTransferUpdateWithoutVehicleInput, Prisma.HubTransferUncheckedUpdateWithoutVehicleInput>
+}
+
+export type HubTransferUpdateManyWithWhereWithoutVehicleInput = {
+  where: Prisma.HubTransferScalarWhereInput
+  data: Prisma.XOR<Prisma.HubTransferUpdateManyMutationInput, Prisma.HubTransferUncheckedUpdateManyWithoutVehicleInput>
+}
+
 export type HubTransferCreateManyFromHubInput = {
   id?: string
   parcelId: string
   toHubId: string
+  vehicleId?: string | null
   transferredAt?: Date | string
 }
 
@@ -589,6 +705,7 @@ export type HubTransferCreateManyToHubInput = {
   id?: string
   parcelId: string
   fromHubId?: string | null
+  vehicleId?: string | null
   transferredAt?: Date | string
 }
 
@@ -597,12 +714,14 @@ export type HubTransferUpdateWithoutFromHubInput = {
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   parcel?: Prisma.ParcelUpdateOneRequiredWithoutTransfersNestedInput
   toHub?: Prisma.HubUpdateOneRequiredWithoutToTransfersNestedInput
+  vehicle?: Prisma.VehicleUpdateOneWithoutHubTransfersNestedInput
 }
 
 export type HubTransferUncheckedUpdateWithoutFromHubInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   parcelId?: Prisma.StringFieldUpdateOperationsInput | string
   toHubId?: Prisma.StringFieldUpdateOperationsInput | string
+  vehicleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -610,6 +729,7 @@ export type HubTransferUncheckedUpdateManyWithoutFromHubInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   parcelId?: Prisma.StringFieldUpdateOperationsInput | string
   toHubId?: Prisma.StringFieldUpdateOperationsInput | string
+  vehicleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -618,12 +738,14 @@ export type HubTransferUpdateWithoutToHubInput = {
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   parcel?: Prisma.ParcelUpdateOneRequiredWithoutTransfersNestedInput
   fromHub?: Prisma.HubUpdateOneWithoutFromTransfersNestedInput
+  vehicle?: Prisma.VehicleUpdateOneWithoutHubTransfersNestedInput
 }
 
 export type HubTransferUncheckedUpdateWithoutToHubInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   parcelId?: Prisma.StringFieldUpdateOperationsInput | string
   fromHubId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  vehicleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -631,6 +753,7 @@ export type HubTransferUncheckedUpdateManyWithoutToHubInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   parcelId?: Prisma.StringFieldUpdateOperationsInput | string
   fromHubId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  vehicleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -638,6 +761,7 @@ export type HubTransferCreateManyParcelInput = {
   id?: string
   fromHubId?: string | null
   toHubId: string
+  vehicleId?: string | null
   transferredAt?: Date | string
 }
 
@@ -646,17 +770,52 @@ export type HubTransferUpdateWithoutParcelInput = {
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   fromHub?: Prisma.HubUpdateOneWithoutFromTransfersNestedInput
   toHub?: Prisma.HubUpdateOneRequiredWithoutToTransfersNestedInput
+  vehicle?: Prisma.VehicleUpdateOneWithoutHubTransfersNestedInput
 }
 
 export type HubTransferUncheckedUpdateWithoutParcelInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   fromHubId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   toHubId?: Prisma.StringFieldUpdateOperationsInput | string
+  vehicleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type HubTransferUncheckedUpdateManyWithoutParcelInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  fromHubId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toHubId?: Prisma.StringFieldUpdateOperationsInput | string
+  vehicleId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type HubTransferCreateManyVehicleInput = {
+  id?: string
+  parcelId: string
+  fromHubId?: string | null
+  toHubId: string
+  transferredAt?: Date | string
+}
+
+export type HubTransferUpdateWithoutVehicleInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  parcel?: Prisma.ParcelUpdateOneRequiredWithoutTransfersNestedInput
+  fromHub?: Prisma.HubUpdateOneWithoutFromTransfersNestedInput
+  toHub?: Prisma.HubUpdateOneRequiredWithoutToTransfersNestedInput
+}
+
+export type HubTransferUncheckedUpdateWithoutVehicleInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  parcelId?: Prisma.StringFieldUpdateOperationsInput | string
+  fromHubId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  toHubId?: Prisma.StringFieldUpdateOperationsInput | string
+  transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type HubTransferUncheckedUpdateManyWithoutVehicleInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  parcelId?: Prisma.StringFieldUpdateOperationsInput | string
   fromHubId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   toHubId?: Prisma.StringFieldUpdateOperationsInput | string
   transferredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -669,10 +828,12 @@ export type HubTransferSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   parcelId?: boolean
   fromHubId?: boolean
   toHubId?: boolean
+  vehicleId?: boolean
   transferredAt?: boolean
   parcel?: boolean | Prisma.ParcelDefaultArgs<ExtArgs>
   fromHub?: boolean | Prisma.HubTransfer$fromHubArgs<ExtArgs>
   toHub?: boolean | Prisma.HubDefaultArgs<ExtArgs>
+  vehicle?: boolean | Prisma.HubTransfer$vehicleArgs<ExtArgs>
 }, ExtArgs["result"]["hubTransfer"]>
 
 export type HubTransferSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -680,10 +841,12 @@ export type HubTransferSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   parcelId?: boolean
   fromHubId?: boolean
   toHubId?: boolean
+  vehicleId?: boolean
   transferredAt?: boolean
   parcel?: boolean | Prisma.ParcelDefaultArgs<ExtArgs>
   fromHub?: boolean | Prisma.HubTransfer$fromHubArgs<ExtArgs>
   toHub?: boolean | Prisma.HubDefaultArgs<ExtArgs>
+  vehicle?: boolean | Prisma.HubTransfer$vehicleArgs<ExtArgs>
 }, ExtArgs["result"]["hubTransfer"]>
 
 export type HubTransferSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -691,10 +854,12 @@ export type HubTransferSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   parcelId?: boolean
   fromHubId?: boolean
   toHubId?: boolean
+  vehicleId?: boolean
   transferredAt?: boolean
   parcel?: boolean | Prisma.ParcelDefaultArgs<ExtArgs>
   fromHub?: boolean | Prisma.HubTransfer$fromHubArgs<ExtArgs>
   toHub?: boolean | Prisma.HubDefaultArgs<ExtArgs>
+  vehicle?: boolean | Prisma.HubTransfer$vehicleArgs<ExtArgs>
 }, ExtArgs["result"]["hubTransfer"]>
 
 export type HubTransferSelectScalar = {
@@ -702,24 +867,28 @@ export type HubTransferSelectScalar = {
   parcelId?: boolean
   fromHubId?: boolean
   toHubId?: boolean
+  vehicleId?: boolean
   transferredAt?: boolean
 }
 
-export type HubTransferOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "parcelId" | "fromHubId" | "toHubId" | "transferredAt", ExtArgs["result"]["hubTransfer"]>
+export type HubTransferOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "parcelId" | "fromHubId" | "toHubId" | "vehicleId" | "transferredAt", ExtArgs["result"]["hubTransfer"]>
 export type HubTransferInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   parcel?: boolean | Prisma.ParcelDefaultArgs<ExtArgs>
   fromHub?: boolean | Prisma.HubTransfer$fromHubArgs<ExtArgs>
   toHub?: boolean | Prisma.HubDefaultArgs<ExtArgs>
+  vehicle?: boolean | Prisma.HubTransfer$vehicleArgs<ExtArgs>
 }
 export type HubTransferIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   parcel?: boolean | Prisma.ParcelDefaultArgs<ExtArgs>
   fromHub?: boolean | Prisma.HubTransfer$fromHubArgs<ExtArgs>
   toHub?: boolean | Prisma.HubDefaultArgs<ExtArgs>
+  vehicle?: boolean | Prisma.HubTransfer$vehicleArgs<ExtArgs>
 }
 export type HubTransferIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   parcel?: boolean | Prisma.ParcelDefaultArgs<ExtArgs>
   fromHub?: boolean | Prisma.HubTransfer$fromHubArgs<ExtArgs>
   toHub?: boolean | Prisma.HubDefaultArgs<ExtArgs>
+  vehicle?: boolean | Prisma.HubTransfer$vehicleArgs<ExtArgs>
 }
 
 export type $HubTransferPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -728,12 +897,14 @@ export type $HubTransferPayload<ExtArgs extends runtime.Types.Extensions.Interna
     parcel: Prisma.$ParcelPayload<ExtArgs>
     fromHub: Prisma.$HubPayload<ExtArgs> | null
     toHub: Prisma.$HubPayload<ExtArgs>
+    vehicle: Prisma.$VehiclePayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     parcelId: string
     fromHubId: string | null
     toHubId: string
+    vehicleId: string | null
     transferredAt: Date
   }, ExtArgs["result"]["hubTransfer"]>
   composites: {}
@@ -1132,6 +1303,7 @@ export interface Prisma__HubTransferClient<T, Null = never, ExtArgs extends runt
   parcel<T extends Prisma.ParcelDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.ParcelDefaultArgs<ExtArgs>>): Prisma.Prisma__ParcelClient<runtime.Types.Result.GetResult<Prisma.$ParcelPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   fromHub<T extends Prisma.HubTransfer$fromHubArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.HubTransfer$fromHubArgs<ExtArgs>>): Prisma.Prisma__HubClient<runtime.Types.Result.GetResult<Prisma.$HubPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   toHub<T extends Prisma.HubDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.HubDefaultArgs<ExtArgs>>): Prisma.Prisma__HubClient<runtime.Types.Result.GetResult<Prisma.$HubPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  vehicle<T extends Prisma.HubTransfer$vehicleArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.HubTransfer$vehicleArgs<ExtArgs>>): Prisma.Prisma__VehicleClient<runtime.Types.Result.GetResult<Prisma.$VehiclePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1165,6 +1337,7 @@ export interface HubTransferFieldRefs {
   readonly parcelId: Prisma.FieldRef<"HubTransfer", 'String'>
   readonly fromHubId: Prisma.FieldRef<"HubTransfer", 'String'>
   readonly toHubId: Prisma.FieldRef<"HubTransfer", 'String'>
+  readonly vehicleId: Prisma.FieldRef<"HubTransfer", 'String'>
   readonly transferredAt: Prisma.FieldRef<"HubTransfer", 'DateTime'>
 }
     
@@ -1583,6 +1756,25 @@ export type HubTransfer$fromHubArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   include?: Prisma.HubInclude<ExtArgs> | null
   where?: Prisma.HubWhereInput
+}
+
+/**
+ * HubTransfer.vehicle
+ */
+export type HubTransfer$vehicleArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Vehicle
+   */
+  select?: Prisma.VehicleSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Vehicle
+   */
+  omit?: Prisma.VehicleOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.VehicleInclude<ExtArgs> | null
+  where?: Prisma.VehicleWhereInput
 }
 
 /**

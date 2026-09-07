@@ -7,7 +7,8 @@ const transitions: Record<ParcelStatus, ParcelStatus[]> = {
   CREATED: ["PICKUP_ASSIGNED", "CANCELLED"],
   PICKUP_ASSIGNED: ["PICKED_UP", "CANCELLED"],
   PICKED_UP: ["AT_HUB", "DELIVERY_FAILED"],
-  AT_HUB: ["SORTING", "OUT_FOR_DELIVERY", "LOST_DAMAGED"],
+  AT_HUB: ["IN_TRANSIT", "SORTING", "OUT_FOR_DELIVERY", "LOST_DAMAGED"],
+  IN_TRANSIT: ["AT_HUB", "LOST_DAMAGED"],
   SORTING: ["AT_HUB", "OUT_FOR_DELIVERY"],
   OUT_FOR_DELIVERY: ["DELIVERED", "DELIVERY_FAILED", "RESCHEDULED", "RETURNED"],
   DELIVERY_FAILED: ["RESCHEDULED", "RETURNED"],
@@ -35,7 +36,23 @@ export async function createParcel(input: {
         idempotencyKey: input.idempotencyKey,
       },
     });
-    if (existing) return existing;
+    if (existing) {
+      const samePayload =
+        existing.customerId === input.customerId &&
+        existing.pickupAddress === input.pickupAddress &&
+        existing.deliveryAddress === input.deliveryAddress &&
+        existing.weightGrams === input.weightGrams &&
+        Number(existing.codAmount) === input.codAmount &&
+        (existing.description ?? undefined) === input.description;
+
+      if (!samePayload)
+        throw new AppError(
+          409,
+          "Idempotency key has already been used with a different parcel payload. Use a new Idempotency-Key.",
+        );
+
+      return existing;
+    }
   }
   const deliveryCharge = Math.max(
     60,

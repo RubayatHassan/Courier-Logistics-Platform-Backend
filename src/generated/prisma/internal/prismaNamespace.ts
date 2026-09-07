@@ -4542,6 +4542,7 @@ export const HubTransferScalarFieldEnum = {
   parcelId: 'parcelId',
   fromHubId: 'fromHubId',
   toHubId: 'toHubId',
+  vehicleId: 'vehicleId',
   transferredAt: 'transferredAt'
 } as const
 

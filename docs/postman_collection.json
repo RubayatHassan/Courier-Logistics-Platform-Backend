@@ -4,12 +4,30 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:4000/api/v1" },
+    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
     { "key": "accessToken", "value": "" },
     { "key": "trackingNumber", "value": "CLP..." },
-    { "key": "parcelId", "value": "" }
+    { "key": "parcelId", "value": "" },
+    { "key": "branchId", "value": "" },
+    { "key": "originHubId", "value": "" },
+    { "key": "destinationHubId", "value": "" },
+    { "key": "vehicleId", "value": "" },
+    { "key": "riderId", "value": "" }
   ],
   "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Health",
+          "request": { "method": "GET", "url": "http://localhost:5000/health" }
+        },
+        {
+          "name": "Readiness",
+          "request": { "method": "GET", "url": "http://localhost:5000/ready" }
+        }
+      ]
+    },
     {
       "name": "Auth",
       "item": [
@@ -35,6 +53,79 @@
               "raw": "{\"email\":\"admin@example.com\",\"password\":\"Password123!\"}"
             },
             "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.data?.accessToken) pm.collectionVariables.set('accessToken', body.data.accessToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Super Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"superadmin@example.com\",\"password\":\"SuperAdmin123!\"}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const body = pm.response.json();",
+                  "if (body.data?.accessToken) pm.collectionVariables.set('accessToken', body.data.accessToken);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"merchant@example.com\",\"code\":\"123456\"}"
+            },
+            "url": "{{baseUrl}}/auth/verify-email"
+          }
+        },
+        {
+          "name": "Get my profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/auth/me"
+          }
+        },
+        {
+          "name": "Update my profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Updated Name\",\"phone\":\"01700000000\"}"
+            },
+            "url": "{{baseUrl}}/auth/me"
           }
         },
         {
@@ -61,6 +152,30 @@
               "raw": "{\"credential\":\"<Google ID token>\"}"
             },
             "url": "{{baseUrl}}/auth/google"
+          }
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"user@example.com\"}"
+            },
+            "url": "{{baseUrl}}/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"user@example.com\",\"code\":\"123456\",\"password\":\"NewPassword123!\"}"
+            },
+            "url": "{{baseUrl}}/auth/reset-password"
           }
         },
         {
@@ -93,11 +208,11 @@
             "header": [
               { "key": "Authorization", "value": "Bearer {{accessToken}}" },
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Idempotency-Key", "value": "booking-001" }
+              { "key": "Idempotency-Key", "value": "{{$guid}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"customerId\":\"<customer uuid>\",\"pickupAddress\":\"Motijheel, Dhaka\",\"deliveryAddress\":\"Gulshan, Dhaka\",\"weightGrams\":1200,\"codAmount\":500}"
+              "raw": "{\"customerId\":\"<customer uuid>\",\"pickupAddress\":\"Motijheel, Dhaka\",\"deliveryAddress\":\"Uttara, Dhaka\",\"weightGrams\":1500,\"codAmount\":600}"
             },
             "url": "{{baseUrl}}/parcels"
           }
@@ -122,6 +237,191 @@
               "raw": "{\"status\":\"PICKUP_ASSIGNED\",\"note\":\"Rider assigned\"}"
             },
             "url": "{{baseUrl}}/parcels/{{parcelId}}/status"
+          }
+        },
+        {
+          "name": "Assign origin hub",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hubId\":\"ORIGIN_HUB_ID\"}"
+            },
+            "url": "{{baseUrl}}/parcels/{{parcelId}}/assign-origin-hub"
+          }
+        },
+        {
+          "name": "Dispatch to destination hub",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"destinationHubId\":\"DESTINATION_HUB_ID\",\"vehicleId\":\"VEHICLE_ID\"}"
+            },
+            "url": "{{baseUrl}}/parcels/{{parcelId}}/dispatch"
+          }
+        },
+        {
+          "name": "Mark arrived at destination hub",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/parcels/{{parcelId}}/mark-arrived"
+          }
+        },
+        {
+          "name": "Assign rider",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"riderId\":\"RIDER_ID\",\"vehicleId\":\"VEHICLE_ID\"}"
+            },
+            "url": "{{baseUrl}}/parcels/{{parcelId}}/assign-rider"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "List customers",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/customers"
+          }
+        },
+        {
+          "name": "Create customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Rahim Customer\",\"phone\":\"01800000000\",\"email\":\"rahim@example.com\"}"
+            },
+            "url": "{{baseUrl}}/customers"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Operations (Admin/Super Admin)",
+      "item": [
+        {
+          "name": "Create branch",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Dhaka Branch\",\"code\":\"DHK-BR-01\",\"type\":\"HUB\",\"phone\":\"01700000000\",\"email\":\"dhaka-branch@example.com\"}"
+            },
+            "url": "{{baseUrl}}/operations/branches"
+          }
+        },
+        {
+          "name": "Create hub",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Dhaka Central Hub\",\"code\":\"DHK-01\",\"address\":\"Motijheel, Dhaka\",\"city\":\"Dhaka\",\"branchId\":\"{{branchId}}\"}"
+            },
+            "url": "{{baseUrl}}/operations/hubs"
+          }
+        },
+        {
+          "name": "Create vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\":\"Van\",\"plateNumber\":\"DHK-VA-001\",\"capacityKg\":1000}"
+            },
+            "url": "{{baseUrl}}/operations/vehicles"
+          }
+        },
+        {
+          "name": "Create hub manager",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"hubmanager@example.com\",\"password\":\"Password123!\",\"name\":\"Dhaka Hub Manager\",\"branchId\":\"{{branchId}}\"}"
+            },
+            "url": "{{baseUrl}}/operations/hub-managers"
+          }
+        },
+        {
+          "name": "Create rider",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"rider2@example.com\",\"password\":\"Password123!\",\"name\":\"Demo Rider\",\"phone\":\"01900000000\",\"hubId\":\"{{destinationHubId}}\",\"vehicleType\":\"Motorbike\"}"
+            },
+            "url": "{{baseUrl}}/operations/riders"
+          }
+        },
+        {
+          "name": "List hubs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations/hubs"
+          }
+        },
+        {
+          "name": "List vehicles",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations/vehicles"
           }
         }
       ]

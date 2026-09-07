@@ -230,6 +230,7 @@ export type VehicleWhereInput = {
   isActive?: Prisma.BoolFilter<"Vehicle"> | boolean
   assignments?: Prisma.AssignmentListRelationFilter
   legacyAssignments?: Prisma.DeliveryAssignmentListRelationFilter
+  hubTransfers?: Prisma.HubTransferListRelationFilter
 }
 
 export type VehicleOrderByWithRelationInput = {
@@ -241,6 +242,7 @@ export type VehicleOrderByWithRelationInput = {
   isActive?: Prisma.SortOrder
   assignments?: Prisma.AssignmentOrderByRelationAggregateInput
   legacyAssignments?: Prisma.DeliveryAssignmentOrderByRelationAggregateInput
+  hubTransfers?: Prisma.HubTransferOrderByRelationAggregateInput
 }
 
 export type VehicleWhereUniqueInput = Prisma.AtLeast<{
@@ -255,6 +257,7 @@ export type VehicleWhereUniqueInput = Prisma.AtLeast<{
   isActive?: Prisma.BoolFilter<"Vehicle"> | boolean
   assignments?: Prisma.AssignmentListRelationFilter
   legacyAssignments?: Prisma.DeliveryAssignmentListRelationFilter
+  hubTransfers?: Prisma.HubTransferListRelationFilter
 }, "id" | "plateNumber">
 
 export type VehicleOrderByWithAggregationInput = {
@@ -292,6 +295,7 @@ export type VehicleCreateInput = {
   isActive?: boolean
   assignments?: Prisma.AssignmentCreateNestedManyWithoutVehicleInput
   legacyAssignments?: Prisma.DeliveryAssignmentCreateNestedManyWithoutVehicleInput
+  hubTransfers?: Prisma.HubTransferCreateNestedManyWithoutVehicleInput
 }
 
 export type VehicleUncheckedCreateInput = {
@@ -303,6 +307,7 @@ export type VehicleUncheckedCreateInput = {
   isActive?: boolean
   assignments?: Prisma.AssignmentUncheckedCreateNestedManyWithoutVehicleInput
   legacyAssignments?: Prisma.DeliveryAssignmentUncheckedCreateNestedManyWithoutVehicleInput
+  hubTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutVehicleInput
 }
 
 export type VehicleUpdateInput = {
@@ -314,6 +319,7 @@ export type VehicleUpdateInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assignments?: Prisma.AssignmentUpdateManyWithoutVehicleNestedInput
   legacyAssignments?: Prisma.DeliveryAssignmentUpdateManyWithoutVehicleNestedInput
+  hubTransfers?: Prisma.HubTransferUpdateManyWithoutVehicleNestedInput
 }
 
 export type VehicleUncheckedUpdateInput = {
@@ -325,6 +331,7 @@ export type VehicleUncheckedUpdateInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assignments?: Prisma.AssignmentUncheckedUpdateManyWithoutVehicleNestedInput
   legacyAssignments?: Prisma.DeliveryAssignmentUncheckedUpdateManyWithoutVehicleNestedInput
+  hubTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutVehicleNestedInput
 }
 
 export type VehicleCreateManyInput = {
@@ -412,6 +419,22 @@ export type VehicleUpdateOneWithoutLegacyAssignmentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.VehicleUpdateToOneWithWhereWithoutLegacyAssignmentsInput, Prisma.VehicleUpdateWithoutLegacyAssignmentsInput>, Prisma.VehicleUncheckedUpdateWithoutLegacyAssignmentsInput>
 }
 
+export type VehicleCreateNestedOneWithoutHubTransfersInput = {
+  create?: Prisma.XOR<Prisma.VehicleCreateWithoutHubTransfersInput, Prisma.VehicleUncheckedCreateWithoutHubTransfersInput>
+  connectOrCreate?: Prisma.VehicleCreateOrConnectWithoutHubTransfersInput
+  connect?: Prisma.VehicleWhereUniqueInput
+}
+
+export type VehicleUpdateOneWithoutHubTransfersNestedInput = {
+  create?: Prisma.XOR<Prisma.VehicleCreateWithoutHubTransfersInput, Prisma.VehicleUncheckedCreateWithoutHubTransfersInput>
+  connectOrCreate?: Prisma.VehicleCreateOrConnectWithoutHubTransfersInput
+  upsert?: Prisma.VehicleUpsertWithoutHubTransfersInput
+  disconnect?: Prisma.VehicleWhereInput | boolean
+  delete?: Prisma.VehicleWhereInput | boolean
+  connect?: Prisma.VehicleWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.VehicleUpdateToOneWithWhereWithoutHubTransfersInput, Prisma.VehicleUpdateWithoutHubTransfersInput>, Prisma.VehicleUncheckedUpdateWithoutHubTransfersInput>
+}
+
 export type VehicleCreateNestedOneWithoutAssignmentsInput = {
   create?: Prisma.XOR<Prisma.VehicleCreateWithoutAssignmentsInput, Prisma.VehicleUncheckedCreateWithoutAssignmentsInput>
   connectOrCreate?: Prisma.VehicleCreateOrConnectWithoutAssignmentsInput
@@ -436,6 +459,7 @@ export type VehicleCreateWithoutLegacyAssignmentsInput = {
   capacityVolume?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isActive?: boolean
   assignments?: Prisma.AssignmentCreateNestedManyWithoutVehicleInput
+  hubTransfers?: Prisma.HubTransferCreateNestedManyWithoutVehicleInput
 }
 
 export type VehicleUncheckedCreateWithoutLegacyAssignmentsInput = {
@@ -446,6 +470,7 @@ export type VehicleUncheckedCreateWithoutLegacyAssignmentsInput = {
   capacityVolume?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isActive?: boolean
   assignments?: Prisma.AssignmentUncheckedCreateNestedManyWithoutVehicleInput
+  hubTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutVehicleInput
 }
 
 export type VehicleCreateOrConnectWithoutLegacyAssignmentsInput = {
@@ -472,6 +497,7 @@ export type VehicleUpdateWithoutLegacyAssignmentsInput = {
   capacityVolume?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assignments?: Prisma.AssignmentUpdateManyWithoutVehicleNestedInput
+  hubTransfers?: Prisma.HubTransferUpdateManyWithoutVehicleNestedInput
 }
 
 export type VehicleUncheckedUpdateWithoutLegacyAssignmentsInput = {
@@ -482,6 +508,67 @@ export type VehicleUncheckedUpdateWithoutLegacyAssignmentsInput = {
   capacityVolume?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   assignments?: Prisma.AssignmentUncheckedUpdateManyWithoutVehicleNestedInput
+  hubTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutVehicleNestedInput
+}
+
+export type VehicleCreateWithoutHubTransfersInput = {
+  id?: string
+  type: string
+  plateNumber: string
+  capacityKg?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  capacityVolume?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isActive?: boolean
+  assignments?: Prisma.AssignmentCreateNestedManyWithoutVehicleInput
+  legacyAssignments?: Prisma.DeliveryAssignmentCreateNestedManyWithoutVehicleInput
+}
+
+export type VehicleUncheckedCreateWithoutHubTransfersInput = {
+  id?: string
+  type: string
+  plateNumber: string
+  capacityKg?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  capacityVolume?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isActive?: boolean
+  assignments?: Prisma.AssignmentUncheckedCreateNestedManyWithoutVehicleInput
+  legacyAssignments?: Prisma.DeliveryAssignmentUncheckedCreateNestedManyWithoutVehicleInput
+}
+
+export type VehicleCreateOrConnectWithoutHubTransfersInput = {
+  where: Prisma.VehicleWhereUniqueInput
+  create: Prisma.XOR<Prisma.VehicleCreateWithoutHubTransfersInput, Prisma.VehicleUncheckedCreateWithoutHubTransfersInput>
+}
+
+export type VehicleUpsertWithoutHubTransfersInput = {
+  update: Prisma.XOR<Prisma.VehicleUpdateWithoutHubTransfersInput, Prisma.VehicleUncheckedUpdateWithoutHubTransfersInput>
+  create: Prisma.XOR<Prisma.VehicleCreateWithoutHubTransfersInput, Prisma.VehicleUncheckedCreateWithoutHubTransfersInput>
+  where?: Prisma.VehicleWhereInput
+}
+
+export type VehicleUpdateToOneWithWhereWithoutHubTransfersInput = {
+  where?: Prisma.VehicleWhereInput
+  data: Prisma.XOR<Prisma.VehicleUpdateWithoutHubTransfersInput, Prisma.VehicleUncheckedUpdateWithoutHubTransfersInput>
+}
+
+export type VehicleUpdateWithoutHubTransfersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  plateNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  capacityKg?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  capacityVolume?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  assignments?: Prisma.AssignmentUpdateManyWithoutVehicleNestedInput
+  legacyAssignments?: Prisma.DeliveryAssignmentUpdateManyWithoutVehicleNestedInput
+}
+
+export type VehicleUncheckedUpdateWithoutHubTransfersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  plateNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  capacityKg?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  capacityVolume?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  assignments?: Prisma.AssignmentUncheckedUpdateManyWithoutVehicleNestedInput
+  legacyAssignments?: Prisma.DeliveryAssignmentUncheckedUpdateManyWithoutVehicleNestedInput
 }
 
 export type VehicleCreateWithoutAssignmentsInput = {
@@ -492,6 +579,7 @@ export type VehicleCreateWithoutAssignmentsInput = {
   capacityVolume?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isActive?: boolean
   legacyAssignments?: Prisma.DeliveryAssignmentCreateNestedManyWithoutVehicleInput
+  hubTransfers?: Prisma.HubTransferCreateNestedManyWithoutVehicleInput
 }
 
 export type VehicleUncheckedCreateWithoutAssignmentsInput = {
@@ -502,6 +590,7 @@ export type VehicleUncheckedCreateWithoutAssignmentsInput = {
   capacityVolume?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isActive?: boolean
   legacyAssignments?: Prisma.DeliveryAssignmentUncheckedCreateNestedManyWithoutVehicleInput
+  hubTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutVehicleInput
 }
 
 export type VehicleCreateOrConnectWithoutAssignmentsInput = {
@@ -528,6 +617,7 @@ export type VehicleUpdateWithoutAssignmentsInput = {
   capacityVolume?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   legacyAssignments?: Prisma.DeliveryAssignmentUpdateManyWithoutVehicleNestedInput
+  hubTransfers?: Prisma.HubTransferUpdateManyWithoutVehicleNestedInput
 }
 
 export type VehicleUncheckedUpdateWithoutAssignmentsInput = {
@@ -538,6 +628,7 @@ export type VehicleUncheckedUpdateWithoutAssignmentsInput = {
   capacityVolume?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   legacyAssignments?: Prisma.DeliveryAssignmentUncheckedUpdateManyWithoutVehicleNestedInput
+  hubTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutVehicleNestedInput
 }
 
 
@@ -548,11 +639,13 @@ export type VehicleUncheckedUpdateWithoutAssignmentsInput = {
 export type VehicleCountOutputType = {
   assignments: number
   legacyAssignments: number
+  hubTransfers: number
 }
 
 export type VehicleCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignments?: boolean | VehicleCountOutputTypeCountAssignmentsArgs
   legacyAssignments?: boolean | VehicleCountOutputTypeCountLegacyAssignmentsArgs
+  hubTransfers?: boolean | VehicleCountOutputTypeCountHubTransfersArgs
 }
 
 /**
@@ -579,6 +672,13 @@ export type VehicleCountOutputTypeCountLegacyAssignmentsArgs<ExtArgs extends run
   where?: Prisma.DeliveryAssignmentWhereInput
 }
 
+/**
+ * VehicleCountOutputType without action
+ */
+export type VehicleCountOutputTypeCountHubTransfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.HubTransferWhereInput
+}
+
 
 export type VehicleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -589,6 +689,7 @@ export type VehicleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   isActive?: boolean
   assignments?: boolean | Prisma.Vehicle$assignmentsArgs<ExtArgs>
   legacyAssignments?: boolean | Prisma.Vehicle$legacyAssignmentsArgs<ExtArgs>
+  hubTransfers?: boolean | Prisma.Vehicle$hubTransfersArgs<ExtArgs>
   _count?: boolean | Prisma.VehicleCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["vehicle"]>
 
@@ -623,6 +724,7 @@ export type VehicleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
 export type VehicleInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   assignments?: boolean | Prisma.Vehicle$assignmentsArgs<ExtArgs>
   legacyAssignments?: boolean | Prisma.Vehicle$legacyAssignmentsArgs<ExtArgs>
+  hubTransfers?: boolean | Prisma.Vehicle$hubTransfersArgs<ExtArgs>
   _count?: boolean | Prisma.VehicleCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type VehicleIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -633,6 +735,7 @@ export type $VehiclePayload<ExtArgs extends runtime.Types.Extensions.InternalArg
   objects: {
     assignments: Prisma.$AssignmentPayload<ExtArgs>[]
     legacyAssignments: Prisma.$DeliveryAssignmentPayload<ExtArgs>[]
+    hubTransfers: Prisma.$HubTransferPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1037,6 +1140,7 @@ export interface Prisma__VehicleClient<T, Null = never, ExtArgs extends runtime.
   readonly [Symbol.toStringTag]: "PrismaPromise"
   assignments<T extends Prisma.Vehicle$assignmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Vehicle$assignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   legacyAssignments<T extends Prisma.Vehicle$legacyAssignmentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Vehicle$legacyAssignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeliveryAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  hubTransfers<T extends Prisma.Vehicle$hubTransfersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Vehicle$hubTransfersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HubTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1510,6 +1614,30 @@ export type Vehicle$legacyAssignmentsArgs<ExtArgs extends runtime.Types.Extensio
   take?: number
   skip?: number
   distinct?: Prisma.DeliveryAssignmentScalarFieldEnum | Prisma.DeliveryAssignmentScalarFieldEnum[]
+}
+
+/**
+ * Vehicle.hubTransfers
+ */
+export type Vehicle$hubTransfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the HubTransfer
+   */
+  select?: Prisma.HubTransferSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the HubTransfer
+   */
+  omit?: Prisma.HubTransferOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.HubTransferInclude<ExtArgs> | null
+  where?: Prisma.HubTransferWhereInput
+  orderBy?: Prisma.HubTransferOrderByWithRelationInput | Prisma.HubTransferOrderByWithRelationInput[]
+  cursor?: Prisma.HubTransferWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.HubTransferScalarFieldEnum | Prisma.HubTransferScalarFieldEnum[]
 }
 
 /**

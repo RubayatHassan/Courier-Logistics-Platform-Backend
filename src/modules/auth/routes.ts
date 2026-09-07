@@ -29,6 +29,7 @@ import {
   verifyPassword,
 } from "../../middleware/auth.js";
 import { AppError, asyncHandler, ok } from "../../shared/http.js";
+import type { AuthenticatedRequest } from "../../shared/types.js";
 import { parseInput } from "../../shared/validation.js";
 
 const passwordSchema = z
@@ -48,6 +49,14 @@ const adminCreateSchema = z.object({
   password: passwordSchema,
   name: z.string().min(2),
 });
+const profileUpdateSchema = z
+  .object({
+    name: z.string().min(2).optional(),
+    phone: z.string().min(7).max(20).nullable().optional(),
+  })
+  .refine((input) => input.name !== undefined || input.phone !== undefined, {
+    message: "At least one profile field is required",
+  });
 const emailActionSchema = z
   .object({
     email: z.email().optional(),
@@ -89,9 +98,57 @@ const publicUser = (user: {
   role: user.role,
   merchantId: user.merchantId,
 });
+const profileView = (user: {
+  id: string;
+  email: string;
+  name: string;
+  phone: string | null;
+  role: Role;
+  merchantId: string | null;
+  emailVerifiedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}) => ({
+  id: user.id,
+  email: user.email,
+  name: user.name,
+  phone: user.phone,
+  role: user.role,
+  merchantId: user.merchantId,
+  emailVerifiedAt: user.emailVerifiedAt,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
 
 export const authRouter = Router();
 authRouter.use(cookieParser());
+
+authRouter.get(
+  "/me",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) throw new AppError(401, "Authentication required");
+    const profile = await prisma.user.findUnique({ where: { id: user.id } });
+    if (!profile) throw new AppError(404, "User profile not found");
+    return ok(res, profileView(profile));
+  }),
+);
+
+authRouter.patch(
+  "/me",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) throw new AppError(401, "Authentication required");
+    const input = parseInput(profileUpdateSchema, req.body);
+    const profile = await prisma.user.update({
+      where: { id: user.id },
+      data: input,
+    });
+    return ok(res, profileView(profile));
+  }),
+);
 
 authRouter.post(
   "/admins",

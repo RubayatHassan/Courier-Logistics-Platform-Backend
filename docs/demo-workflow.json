@@ -1,0 +1,26 @@
+{
+  "baseUrl": "http://localhost:5000/api/v1",
+  "credentials": {
+    "merchant": { "email": "merchant@example.com", "password": "Password123!" },
+    "hubManager": { "email": "hubmanager@example.com", "password": "Password123!" },
+    "rider": { "email": "rider@example.com", "password": "Password123!" }
+  },
+  "seedData": {
+    "customerId": "COPY_FROM_PNPM_DB_SEED_OUTPUT",
+    "originHubId": "COPY_FROM_PNPM_DB_SEED_OUTPUT",
+    "destinationHubId": "COPY_FROM_PNPM_DB_SEED_OUTPUT",
+    "vehicleId": "COPY_FROM_PNPM_DB_SEED_OUTPUT"
+  },
+  "steps": [
+    { "name": "Login merchant", "method": "POST", "path": "/auth/login", "body": { "email": "merchant@example.com", "password": "Password123!" } },
+    { "name": "Create parcel", "method": "POST", "path": "/parcels", "body": { "customerId": "{{customerId}}", "pickupAddress": "Motijheel, Dhaka", "deliveryAddress": "Uttara, Dhaka", "weightGrams": 1200, "codAmount": 500 } },
+    { "name": "Assign origin hub", "method": "POST", "path": "/parcels/{{parcelId}}/assign-origin-hub", "body": { "hubId": "{{originHubId}}" } },
+    { "name": "Login hub manager", "method": "POST", "path": "/auth/login", "body": { "email": "hubmanager@example.com", "password": "Password123!" } },
+    { "name": "Dispatch to destination", "method": "POST", "path": "/parcels/{{parcelId}}/dispatch", "body": { "destinationHubId": "{{destinationHubId}}", "vehicleId": "{{vehicleId}}" } },
+    { "name": "Mark arrived", "method": "POST", "path": "/parcels/{{parcelId}}/mark-arrived", "body": {} },
+    { "name": "Assign rider", "method": "POST", "path": "/parcels/{{parcelId}}/assign-rider", "body": { "riderId": "COPY_RIDER_ID_FROM_DB_OR_SEED", "vehicleId": "{{vehicleId}}" } },
+    { "name": "Out for delivery", "method": "PATCH", "path": "/parcels/{{parcelId}}/status", "body": { "status": "OUT_FOR_DELIVERY", "note": "Rider left destination hub" } },
+    { "name": "Delivered", "method": "PATCH", "path": "/parcels/{{parcelId}}/status", "body": { "status": "DELIVERED", "note": "Delivered to customer" } },
+    { "name": "Stripe checkout", "method": "POST", "path": "/payments/stripe/checkout", "body": { "parcelId": "{{parcelId}}" } }
+  ]
+}

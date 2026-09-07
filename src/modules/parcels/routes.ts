@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Request } from "express";
 import { z } from "zod";
 import { prisma } from "../../infrastructure/prisma.js";
 import { cacheGet, cacheSet } from "../../infrastructure/redis.js";
@@ -37,6 +38,7 @@ const parcelStatusQuery = z.enum([
   "PICKUP_ASSIGNED",
   "PICKED_UP",
   "AT_HUB",
+  "IN_TRANSIT",
   "SORTING",
   "OUT_FOR_DELIVERY",
   "DELIVERED",
@@ -51,7 +53,22 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   status: parcelStatusQuery.optional(),
 });
+const originHubSchema = z.object({ hubId: z.uuid() });
+const dispatchSchema = z.object({
+  destinationHubId: z.uuid(),
+  vehicleId: z.uuid().optional(),
+});
+const riderAssignmentSchema = z.object({
+  riderId: z.uuid(),
+  vehicleId: z.uuid().optional(),
+});
 export const parcelRouter = Router();
+function parcelIdFromRequest(req: Request) {
+  const parcelId = req.params.id;
+  if (typeof parcelId !== "string")
+    throw new AppError(400, "Parcel id is required");
+  return parcelId;
+}
 
 parcelRouter.get(
   "/track/:trackingNumber",
@@ -141,6 +158,245 @@ parcelRouter.post(
       }),
       201,
     );
+  }),
+);
+
+parcelRouter.post(
+  "/:id/assign-origin-hub",
+  authorize("MERCHANT", "ADMIN"),
+  asyncHandler(async (req, res) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) throw new AppError(401, "Authentication required");
+    const { hubId } = parseInput(originHubSchema, req.body);
+    const parcelId = parcelIdFromRequest(req);
+    const parcel = await prisma.parcel.findFirst({
+      where: {
+        id: parcelId,
+        ...(user.merchantId ? { merchantId: user.merchantId } : {}),
+      },
+    });
+    if (!parcel) throw new AppError(404, "Parcel not found");
+    const hub = await prisma.hub.findFirst({
+      where: { id: hubId, isActive: true },
+    });
+    if (!hub) throw new AppError(404, "Origin hub not found");
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.parcel.update({
+        where: { id: parcel.id },
+        data: { currentHubId: hub.id, status: "AT_HUB" },
+      });
+      await tx.trackingEvent.create({
+        data: {
+          parcelId: parcel.id,
+          status: "AT_HUB",
+          actorId: user.id,
+          location: hub.name,
+          note: "Origin hub assigned",
+        },
+      });
+      if (hub.branchId) {
+        const managers = await tx.user.findMany({
+          where: {
+            role: "HUB_MANAGER",
+            userBranches: { some: { branchId: hub.branchId } },
+          },
+          select: { id: true },
+        });
+        if (managers.length > 0)
+          await tx.notification.createMany({
+            data: managers.map((manager) => ({
+              userId: manager.id,
+              channel: "IN_APP",
+              recipient: manager.id,
+              subject: "New parcel assigned to your hub",
+              payload: {
+                parcelId: parcel.id,
+                trackingNumber: parcel.trackingNumber,
+                hubId: hub.id,
+              },
+            })),
+          });
+      }
+      return result;
+    });
+    return ok(res, updated);
+  }),
+);
+
+parcelRouter.post(
+  "/:id/dispatch",
+  authorize("HUB_MANAGER", "ADMIN"),
+  asyncHandler(async (req, res) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) throw new AppError(401, "Authentication required");
+    const input = parseInput(dispatchSchema, req.body);
+    const parcelId = parcelIdFromRequest(req);
+    const parcel = await prisma.parcel.findUnique({
+      where: { id: parcelId },
+      include: {
+        currentHub: {
+          include: { branch: { include: { userBranches: true } } },
+        },
+      },
+    });
+    if (!parcel || !parcel.currentHub)
+      throw new AppError(404, "Parcel or current hub not found");
+    if (
+      user.role === "HUB_MANAGER" &&
+      !parcel.currentHub.branch?.userBranches.some(
+        (item) => item.userId === user.id,
+      )
+    )
+      throw new AppError(403, "Parcel is outside your hub scope");
+    if (parcel.status !== "AT_HUB")
+      throw new AppError(409, "Only parcels at a hub can be dispatched");
+    const destination = await prisma.hub.findFirst({
+      where: { id: input.destinationHubId, isActive: true },
+    });
+    if (!destination) throw new AppError(404, "Destination hub not found");
+    if (
+      input.vehicleId &&
+      !(await prisma.vehicle.findFirst({
+        where: { id: input.vehicleId, isActive: true },
+      }))
+    )
+      throw new AppError(404, "Vehicle not found");
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.parcel.update({
+        where: { id: parcel.id },
+        data: { status: "IN_TRANSIT" },
+      });
+      await tx.hubTransfer.create({
+        data: {
+          parcelId: parcel.id,
+          fromHubId: parcel.currentHubId,
+          toHubId: destination.id,
+          vehicleId: input.vehicleId,
+        },
+      });
+      await tx.trackingEvent.create({
+        data: {
+          parcelId: parcel.id,
+          status: "IN_TRANSIT",
+          actorId: user.id,
+          location: destination.name,
+          note: "Dispatched to destination hub",
+        },
+      });
+      return updated;
+    });
+    return ok(res, result);
+  }),
+);
+
+parcelRouter.post(
+  "/:id/mark-arrived",
+  authorize("HUB_MANAGER", "ADMIN"),
+  asyncHandler(async (req, res) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) throw new AppError(401, "Authentication required");
+    const parcelId = parcelIdFromRequest(req);
+    const parcel = await prisma.parcel.findUnique({
+      where: { id: parcelId },
+      include: {
+        transfers: {
+          orderBy: { transferredAt: "desc" },
+          take: 1,
+          include: { toHub: true },
+        },
+      },
+    });
+    const transfer = parcel?.transfers[0];
+    if (!parcel || !transfer)
+      throw new AppError(404, "Pending hub transfer not found");
+    if (parcel.status !== "IN_TRANSIT")
+      throw new AppError(409, "Parcel is not in transit");
+    if (user.role === "HUB_MANAGER") {
+      const access = await prisma.userBranch.findFirst({
+        where: {
+          userId: user.id,
+          branch: { hubs: { some: { id: transfer.toHubId } } },
+        },
+      });
+      if (!access)
+        throw new AppError(403, "Destination hub is outside your scope");
+    }
+    const updated = await prisma.$transaction(async (tx) => {
+      const result = await tx.parcel.update({
+        where: { id: parcel.id },
+        data: { currentHubId: transfer.toHubId, status: "AT_HUB" },
+      });
+      await tx.trackingEvent.create({
+        data: {
+          parcelId: parcel.id,
+          status: "AT_HUB",
+          actorId: user.id,
+          location: transfer.toHub.name,
+          note: "Arrived at destination hub",
+        },
+      });
+      return result;
+    });
+    return ok(res, updated);
+  }),
+);
+
+parcelRouter.post(
+  "/:id/assign-rider",
+  authorize("HUB_MANAGER", "ADMIN"),
+  asyncHandler(async (req, res) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) throw new AppError(401, "Authentication required");
+    const input = parseInput(riderAssignmentSchema, req.body);
+    const parcelId = parcelIdFromRequest(req);
+    const parcel = await prisma.parcel.findUnique({ where: { id: parcelId } });
+    if (!parcel || !parcel.currentHubId)
+      throw new AppError(404, "Parcel or current hub not found");
+    if (parcel.status !== "AT_HUB")
+      throw new AppError(
+        409,
+        "Only parcels at a hub can be assigned to a rider",
+      );
+    const rider = await prisma.rider.findFirst({
+      where: {
+        id: input.riderId,
+        hubId: parcel.currentHubId,
+        isAvailable: true,
+      },
+    });
+    if (!rider)
+      throw new AppError(404, "Available rider not found at this hub");
+    if (
+      input.vehicleId &&
+      !(await prisma.vehicle.findFirst({
+        where: { id: input.vehicleId, isActive: true },
+      }))
+    )
+      throw new AppError(404, "Vehicle not found");
+    const result = await prisma.$transaction(async (tx) => {
+      const assignment = await tx.deliveryAssignment.create({
+        data: {
+          parcelId: parcel.id,
+          riderId: rider.id,
+          vehicleId: input.vehicleId,
+          status: "ASSIGNED",
+        },
+      });
+      await tx.parcel.update({
+        where: { id: parcel.id },
+        data: { status: "OUT_FOR_DELIVERY" },
+      });
+      await tx.trackingEvent.create({
+        data: {
+          parcelId: parcel.id,
+          status: "OUT_FOR_DELIVERY",
+          actorId: user.id,
+          note: "Rider assigned for delivery",
+        },
+      });
+      return assignment;
+    });
+    return ok(res, result, 201);
   }),
 );
 

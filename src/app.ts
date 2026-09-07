@@ -6,10 +6,15 @@ import { authRouter } from "./modules/auth/routes.js";
 import { parcelRouter } from "./modules/parcels/routes.js";
 import { errorHandler, ok } from "./shared/http.js";
 import { paymentRouter } from "./modules/payments/routes.js";
+import { customerRouter } from "./modules/customers/routes.js";
+import { operationsRouter } from "./modules/operations/routes.js";
 
 export const app = express();
 registerCoreMiddleware(app);
-app.use("/api/v1/payments/stripe/webhook", express.raw({ type: "application/json" }));
+app.use(
+  "/api/v1/payments/stripe/webhook",
+  express.raw({ type: "application/json" }),
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
@@ -29,5 +34,7 @@ app.get("/ready", async (_req, res) => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/parcels", parcelRouter);
 app.use("/api/v1/payments", paymentRouter);
+app.use("/api/v1/customers", customerRouter);
+app.use("/api/v1/operations", operationsRouter);
 app.use(notFound);
 app.use(errorHandler);
