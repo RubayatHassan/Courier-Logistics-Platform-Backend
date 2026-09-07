@@ -14,7 +14,7 @@ The Prisma schema also contains the full relational ERD layer: users/roles/sessi
 6. Seed demo users: `npm run db:seed`.
 7. Start API: `npm run dev`.
 
-The API is available at `http://localhost:4000`. OpenAPI JSON is at `/api/v1/openapi.json`, and an importable Postman collection is at `docs/postman_collection.json`.
+The API is available at `http://localhost:4000`. An importable Postman collection is available at `docs/postman_collection.json`.
 
 ## Email authentication
 

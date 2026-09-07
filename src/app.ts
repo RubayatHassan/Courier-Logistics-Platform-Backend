@@ -5,7 +5,6 @@ import { notFound, registerCoreMiddleware } from "./middleware/core.js";
 import { authRouter } from "./modules/auth/routes.js";
 import { parcelRouter } from "./modules/parcels/routes.js";
 import { errorHandler, ok } from "./shared/http.js";
-import { openApiDocument } from "./docs/openapi.js";
 import { paymentRouter } from "./modules/payments/routes.js";
 
 export const app = express();
@@ -27,10 +26,6 @@ app.get("/ready", async (_req, res) => {
       .json({ success: false, message: "Database unavailable", errors: [] });
   }
 });
-app.get("/api/v1/openapi.json", (_req, res) =>
-  res.json(openApiDocument),
-);
-
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/parcels", parcelRouter);
 app.use("/api/v1/payments", paymentRouter);
