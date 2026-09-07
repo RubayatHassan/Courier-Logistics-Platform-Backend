@@ -88,10 +88,21 @@ parcelRouter.get(
     const user = (req as AuthenticatedRequest).user;
     if (!user) throw new AppError(401, "Authentication required");
     const { page, limit, status } = parseInput(listQuerySchema, req.query);
-    const where = {
-      ...(user.merchantId ? { merchantId: user.merchantId } : {}),
-      ...(status ? { status } : {}),
-    };
+    const roleScope =
+      user.role === "ADMIN"
+        ? {}
+        : user.role === "MERCHANT" && user.merchantId
+          ? { merchantId: user.merchantId }
+          : user.role === "RIDER"
+            ? { assignments: { some: { rider: { userId: user.id } } } }
+            : user.role === "HUB_MANAGER"
+              ? {
+                  currentHub: {
+                    branch: { userBranches: { some: { userId: user.id } } },
+                  },
+                }
+              : { id: "__no_access__" };
+    const where = { ...roleScope, ...(status ? { status } : {}) };
     const [items, total] = await prisma.$transaction([
       prisma.parcel.findMany({
         where,
@@ -143,6 +154,8 @@ parcelRouter.patch(
     const parcelId = req.params.id;
     if (typeof parcelId !== "string")
       throw new AppError(400, "Parcel id is required");
+    if (user.role === "MERCHANT" && !user.merchantId)
+      throw new AppError(403, "Merchant context required");
     return ok(
       res,
       await transitionParcel(
@@ -151,6 +164,7 @@ parcelRouter.patch(
         input.status,
         user.id,
         input.note,
+        user.role,
       ),
     );
   }),

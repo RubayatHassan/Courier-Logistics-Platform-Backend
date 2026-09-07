@@ -72,9 +72,21 @@ export async function transitionParcel(
   status: ParcelStatus,
   actorId: string,
   note?: string,
+  role?: "ADMIN" | "MERCHANT" | "HUB_MANAGER" | "RIDER" | "CUSTOMER",
 ) {
+  const scope = merchantId
+    ? { merchantId }
+    : role === "RIDER"
+      ? { assignments: { some: { rider: { userId: actorId } } } }
+      : role === "HUB_MANAGER"
+        ? {
+            currentHub: {
+              branch: { userBranches: { some: { userId: actorId } } },
+            },
+          }
+        : {};
   const parcel = await prisma.parcel.findFirst({
-    where: { id, ...(merchantId ? { merchantId } : {}) },
+    where: { id, ...scope },
   });
   if (!parcel) throw new AppError(404, "Parcel not found");
   if (!(transitions[parcel.status] ?? []).includes(status))

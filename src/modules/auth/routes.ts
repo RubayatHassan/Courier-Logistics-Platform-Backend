@@ -222,11 +222,39 @@ authRouter.post(
       throw new AppError(401, "Google account could not be verified");
     const googleId = profile.sub;
     const email = profile.email.toLowerCase();
-    const user = await prisma.user.upsert({
-      where: { googleId },
-      update: { ...(profile.name ? { name: profile.name } : {}), emailVerifiedAt: new Date() },
-      create: { googleId, email, name: profile.name ?? email.split("@")[0] ?? "Google user", passwordHash: await hashPassword(crypto.randomBytes(32).toString("hex")), role: "CUSTOMER", emailVerifiedAt: new Date() },
-    });
+    const existingGoogleUser = await prisma.user.findUnique({ where: { googleId } });
+    const existingEmailUser = existingGoogleUser
+      ? null
+      : await prisma.user.findUnique({ where: { email } });
+    const user = existingGoogleUser
+      ? await prisma.user.update({
+          where: { id: existingGoogleUser.id },
+          data: {
+            ...(profile.name ? { name: profile.name } : {}),
+            emailVerifiedAt: new Date(),
+          },
+        })
+      : existingEmailUser
+        ? await prisma.user.update({
+            where: { id: existingEmailUser.id },
+            data: {
+              googleId,
+              ...(profile.name ? { name: profile.name } : {}),
+              emailVerifiedAt: new Date(),
+            },
+          })
+        : await prisma.user.create({
+            data: {
+              googleId,
+              email,
+              name: profile.name ?? email.split("@")[0] ?? "Google user",
+              passwordHash: await hashPassword(
+                crypto.randomBytes(32).toString("hex"),
+              ),
+              role: "CUSTOMER",
+              emailVerifiedAt: new Date(),
+            },
+          });
     const refreshToken = signRefreshToken(user.id);
     await prisma.refreshToken.create({ data: { userId: user.id, tokenHash: await hashPassword(refreshToken), expiresAt: new Date(Date.now() + 7 * 86400000) } });
     setRefreshCookie(res, refreshToken);
