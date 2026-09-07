@@ -10,6 +10,7 @@ const schema = z.object({
   REDIS_URL: z.string().default("redis://localhost:6379"),
   JWT_ACCESS_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
+  BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
   ACCESS_TOKEN_TTL: z.string().default("15m"),
   REFRESH_TOKEN_TTL: z.string().default("7d"),
   CLIENT_ORIGIN: z.string().default("http://localhost:3000"),
