@@ -10,6 +10,7 @@
 */
 
 export const Role = {
+  SUPER_ADMIN: 'SUPER_ADMIN',
   ADMIN: 'ADMIN',
   MERCHANT: 'MERCHANT',
   HUB_MANAGER: 'HUB_MANAGER',

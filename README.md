@@ -50,6 +50,8 @@ Demo password: `Password123!` for the seeded accounts. Never use it outside loca
 
 Demo administrator: `admin@example.com` / `Password123!`. The seed also creates `merchant@example.com` and `rider@example.com` with the same local-only password.
 
+The environment-configured super administrator is bootstrapped on server startup from `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`. Only this role can create additional administrators with `POST /api/v1/auth/admins`; all protected endpoints also accept the super administrator role.
+
 Google Cloud login requires a Google OAuth web client ID in `GOOGLE_CLIENT_ID`. The API verifies the Google ID token against Google's tokeninfo endpoint before creating or signing in the customer.
 
 Stripe checkout requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Checkout sessions are created against Stripe's live API (test keys are recommended for evaluation), and only signed `checkout.session.completed` webhooks mark a payment as paid. There are no simulated payment success paths.

@@ -52,7 +52,7 @@ export function authenticate(req: Request, _res: Response, next: NextFunction) {
 export function authorize(...roles: Role[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     const user = (req as AuthenticatedRequest).user;
-    if (!user || !roles.includes(user.role))
+    if (!user || (user.role !== "SUPER_ADMIN" && !roles.includes(user.role)))
       return next(new AppError(403, "Insufficient permissions"));
     next();
   };

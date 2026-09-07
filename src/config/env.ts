@@ -11,6 +11,8 @@ const schema = z.object({
   JWT_ACCESS_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
+  SUPER_ADMIN_EMAIL: z.email().optional(),
+  SUPER_ADMIN_PASSWORD: z.string().min(8).optional(),
   ACCESS_TOKEN_TTL: z.string().default("15m"),
   REFRESH_TOKEN_TTL: z.string().default("7d"),
   CLIENT_ORIGIN: z.string().default("http://localhost:3000"),
@@ -27,8 +29,14 @@ const schema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
-  STRIPE_SUCCESS_URL: z.string().url().default("http://localhost:3000/payment/success"),
-  STRIPE_CANCEL_URL: z.string().url().default("http://localhost:3000/payment/cancel"),
+  STRIPE_SUCCESS_URL: z
+    .string()
+    .url()
+    .default("http://localhost:3000/payment/success"),
+  STRIPE_CANCEL_URL: z
+    .string()
+    .url()
+    .default("http://localhost:3000/payment/cancel"),
 });
 
 export const env = schema.parse(process.env);

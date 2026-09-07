@@ -72,7 +72,13 @@ export async function transitionParcel(
   status: ParcelStatus,
   actorId: string,
   note?: string,
-  role?: "ADMIN" | "MERCHANT" | "HUB_MANAGER" | "RIDER" | "CUSTOMER",
+  role?:
+    | "SUPER_ADMIN"
+    | "ADMIN"
+    | "MERCHANT"
+    | "HUB_MANAGER"
+    | "RIDER"
+    | "CUSTOMER",
 ) {
   const scope = merchantId
     ? { merchantId }

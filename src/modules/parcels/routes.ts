@@ -89,7 +89,7 @@ parcelRouter.get(
     if (!user) throw new AppError(401, "Authentication required");
     const { page, limit, status } = parseInput(listQuerySchema, req.query);
     const roleScope =
-      user.role === "ADMIN"
+      user.role === "ADMIN" || user.role === "SUPER_ADMIN"
         ? {}
         : user.role === "MERCHANT" && user.merchantId
           ? { merchantId: user.merchantId }

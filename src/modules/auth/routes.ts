@@ -20,6 +20,8 @@ import {
 } from "../../infrastructure/redis.js";
 import {
   hashPassword,
+  authenticate,
+  authorize,
   revokeRefreshTokens,
   setRefreshCookie,
   signAccessToken,
@@ -29,7 +31,9 @@ import {
 import { AppError, asyncHandler, ok } from "../../shared/http.js";
 import { parseInput } from "../../shared/validation.js";
 
-const passwordSchema = z.string().min(8, "Password must be at least 8 characters");
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters");
 const registerSchema = z.object({
   email: z.email().transform((value) => value.toLowerCase()),
   password: passwordSchema,
@@ -39,6 +43,11 @@ const registerSchema = z.object({
 });
 const loginSchema = z.object({ email: z.email(), password: z.string().min(1) });
 const googleSchema = z.object({ credential: z.string().min(20) });
+const adminCreateSchema = z.object({
+  email: z.email().transform((value) => value.toLowerCase()),
+  password: passwordSchema,
+  name: z.string().min(2),
+});
 const emailActionSchema = z
   .object({
     email: z.email().optional(),
@@ -83,6 +92,29 @@ const publicUser = (user: {
 
 export const authRouter = Router();
 authRouter.use(cookieParser());
+
+authRouter.post(
+  "/admins",
+  authenticate,
+  authorize("SUPER_ADMIN"),
+  asyncHandler(async (req, res) => {
+    const input = parseInput(adminCreateSchema, req.body);
+    const existing = await prisma.user.findUnique({
+      where: { email: input.email },
+    });
+    if (existing) throw new AppError(409, "Email already registered");
+    const admin = await prisma.user.create({
+      data: {
+        email: input.email,
+        name: input.name,
+        passwordHash: await hashPassword(input.password),
+        role: "ADMIN",
+        emailVerifiedAt: new Date(),
+      },
+    });
+    return ok(res, publicUser(admin), 201);
+  }),
+);
 
 const hashToken = (token: string) =>
   crypto.createHash("sha256").update(token).digest("hex");
@@ -214,15 +246,31 @@ authRouter.post(
   "/google",
   asyncHandler(async (req, res) => {
     const input = parseInput(googleSchema, req.body);
-    if (!env.GOOGLE_CLIENT_ID) throw new AppError(503, "Google login is not configured");
-    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(input.credential)}`);
+    if (!env.GOOGLE_CLIENT_ID)
+      throw new AppError(503, "Google login is not configured");
+    const response = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(input.credential)}`,
+    );
     if (!response.ok) throw new AppError(401, "Invalid Google credential");
-    const profile = (await response.json()) as { sub?: string; email?: string; name?: string; aud?: string; email_verified?: string };
-    if (!profile.sub || !profile.email || profile.aud !== env.GOOGLE_CLIENT_ID || profile.email_verified !== "true")
+    const profile = (await response.json()) as {
+      sub?: string;
+      email?: string;
+      name?: string;
+      aud?: string;
+      email_verified?: string;
+    };
+    if (
+      !profile.sub ||
+      !profile.email ||
+      profile.aud !== env.GOOGLE_CLIENT_ID ||
+      profile.email_verified !== "true"
+    )
       throw new AppError(401, "Google account could not be verified");
     const googleId = profile.sub;
     const email = profile.email.toLowerCase();
-    const existingGoogleUser = await prisma.user.findUnique({ where: { googleId } });
+    const existingGoogleUser = await prisma.user.findUnique({
+      where: { googleId },
+    });
     const existingEmailUser = existingGoogleUser
       ? null
       : await prisma.user.findUnique({ where: { email } });
@@ -256,9 +304,23 @@ authRouter.post(
             },
           });
     const refreshToken = signRefreshToken(user.id);
-    await prisma.refreshToken.create({ data: { userId: user.id, tokenHash: await hashPassword(refreshToken), expiresAt: new Date(Date.now() + 7 * 86400000) } });
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: await hashPassword(refreshToken),
+        expiresAt: new Date(Date.now() + 7 * 86400000),
+      },
+    });
     setRefreshCookie(res, refreshToken);
-    return ok(res, { user: publicUser(user), accessToken: signAccessToken({ id: user.id, email: user.email, role: user.role, merchantId: user.merchantId }) });
+    return ok(res, {
+      user: publicUser(user),
+      accessToken: signAccessToken({
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        merchantId: user.merchantId,
+      }),
+    });
   }),
 );
 
