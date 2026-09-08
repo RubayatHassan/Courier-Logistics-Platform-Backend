@@ -283,7 +283,7 @@ parcelRouter.post(
           parcelId: parcel.id,
           fromHubId: parcel.currentHubId,
           toHubId: destination.id,
-          vehicleId: input.vehicleId,
+          vehicleId: input.vehicleId ?? null,
         },
       });
       await tx.trackingEvent.create({
