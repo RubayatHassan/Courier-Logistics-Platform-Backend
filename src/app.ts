@@ -1,5 +1,6 @@
 import cookieParser from "cookie-parser";
 import express from "express";
+import { env } from "./config/env.js";
 import { prisma } from "./infrastructure/prisma.js";
 import { notFound, registerCoreMiddleware } from "./middleware/core.js";
 import { authRouter } from "./modules/auth/routes.js";
@@ -21,9 +22,34 @@ app.use(cookieParser());
 app.get("/health", (_req, res) =>
   ok(res, { status: "ok", service: "courier-platform" }),
 );
-app.get("/payment/success", (req, res) => {
+app.get("/payment/success", async (req, res, next) => {
   const sessionId =
     typeof req.query.session_id === "string" ? req.query.session_id : "";
+  let paymentConfirmed = false;
+  if (sessionId && env.STRIPE_SECRET_KEY) {
+    try {
+      const stripeResponse = await fetch(
+        `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
+        {
+          headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` },
+        },
+      );
+      const session = (await stripeResponse.json()) as {
+        id?: string;
+        payment_status?: string;
+      };
+      if (stripeResponse.ok && session.id === sessionId) {
+        paymentConfirmed = session.payment_status === "paid";
+        if (paymentConfirmed)
+          await prisma.payment.updateMany({
+            where: { providerReference: sessionId, status: "PENDING" },
+            data: { status: "PAID" },
+          });
+      }
+    } catch (error) {
+      return next(error);
+    }
+  }
   const escapedSessionId = sessionId.replace(
     /[&<>"']/g,
     (character) =>
@@ -36,7 +62,7 @@ app.get("/payment/success", (req, res) => {
   <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Payment successful</title></head>
   <body style="font-family:Arial,sans-serif;max-width:640px;margin:80px auto;padding:24px;text-align:center">
     <h1>Payment successful</h1>
-    <p>Your parcel payment was received successfully.</p>
+    <p>${paymentConfirmed ? "Your parcel payment was received successfully." : "Payment is being verified. Please try again shortly."}</p>
     ${sessionId ? `<p>Payment reference: <code>${escapedSessionId}</code></p>` : ""}
   </body>
 </html>`);
