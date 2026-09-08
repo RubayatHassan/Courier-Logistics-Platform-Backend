@@ -177,7 +177,11 @@ parcelRouter.post(
     });
     if (!parcel) throw new AppError(404, "Parcel not found");
     const hub = await prisma.hub.findFirst({
-      where: { id: hubId, isActive: true },
+      where: {
+        id: hubId,
+        isActive: true,
+        ...(user.role === "MERCHANT" ? { merchantId: user.merchantId } : {}),
+      },
     });
     if (!hub) throw new AppError(404, "Origin hub not found");
     const updated = await prisma.$transaction(async (tx) => {
@@ -251,7 +255,11 @@ parcelRouter.post(
     if (parcel.status !== "AT_HUB")
       throw new AppError(409, "Only parcels at a hub can be dispatched");
     const destination = await prisma.hub.findFirst({
-      where: { id: input.destinationHubId, isActive: true },
+      where: {
+        id: input.destinationHubId,
+        isActive: true,
+        ...(parcel.merchantId ? { merchantId: parcel.merchantId } : {}),
+      },
     });
     if (!destination) throw new AppError(404, "Destination hub not found");
     if (
@@ -357,6 +365,15 @@ parcelRouter.post(
         409,
         "Only parcels at a hub can be assigned to a rider",
       );
+    if (user.role === "HUB_MANAGER") {
+      const access = await prisma.userBranch.findFirst({
+        where: {
+          userId: user.id,
+          branch: { hubs: { some: { id: parcel.currentHubId } } },
+        },
+      });
+      if (!access) throw new AppError(403, "Parcel is outside your hub scope");
+    }
     const rider = await prisma.rider.findFirst({
       where: {
         id: input.riderId,

@@ -46,6 +46,8 @@ Pending registrations expire from Redis after 15 minutes. Only a successful veri
 
 After changing `prisma/schema.prisma`, run `npx prisma migrate dev --name <change-name>` to create and apply a migration against your local PostgreSQL instance.
 
+For an existing deployment, apply pending migrations with `npx prisma migrate deploy` before restarting the API. The current deployed database also needs the one-time SQL in `prisma/manual-migrations/20260908000000_add_hub_transfer_vehicle_id.sql`; this is separate because the repository does not yet contain a baseline Prisma migration history.
+
 Demo password: `Password123!` for the seeded accounts. Never use it outside local development.
 
 Demo administrator: `admin@example.com` / `Password123!`. The seed also creates `merchant@example.com` and `rider@example.com` with the same local-only password.
