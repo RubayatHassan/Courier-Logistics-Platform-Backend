@@ -19,9 +19,9 @@ import {
   redis,
 } from "../../infrastructure/redis.js";
 import {
-  hashPassword,
   authenticate,
   authorize,
+  hashPassword,
   revokeRefreshTokens,
   setRefreshCookie,
   signAccessToken,
@@ -169,7 +169,7 @@ authRouter.post(
         emailVerifiedAt: new Date(),
       },
     });
-    return ok(res, publicUser(admin), 201);
+    return ok(res, publicUser(admin), 201, "Admin created successfully");
   }),
 );
 
@@ -514,20 +514,22 @@ async function resetPasswordAction(req: Request, res: Response) {
   }
   if (!record)
     throw new AppError(400, "Invalid or expired password reset code/link");
-  await prisma.$transaction([
-    prisma.user.update({
+  await prisma.$transaction(async (tx) => {
+    const consumed = await tx.passwordResetToken.updateMany({
+      where: { id: record.id, consumedAt: null, expiresAt: { gt: new Date() } },
+      data: { consumedAt: new Date() },
+    });
+    if (consumed.count !== 1)
+      throw new AppError(400, "Invalid or expired password reset code/link");
+    await tx.user.update({
       where: { id: record.userId },
       data: { passwordHash: await hashPassword(input.password) },
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { consumedAt: new Date() },
-    }),
-    prisma.refreshToken.updateMany({
+    });
+    await tx.refreshToken.updateMany({
       where: { userId: record.userId, revokedAt: null },
       data: { revokedAt: new Date() },
-    }),
-  ]);
+    });
+  });
   return ok(res, {
     passwordReset: true,
     message: "Password changed successfully. Please log in again.",
@@ -603,7 +605,7 @@ authRouter.post(
     const token = req.cookies?.refreshToken as string | undefined;
     if (token) {
       try {
-        const p = jwt.decode(token) as { sub?: string } | null;
+        const p = jwt.verify(token, env.JWT_REFRESH_SECRET) as { sub?: string };
         if (p?.sub) await revokeRefreshTokens(p.sub);
       } catch {}
     }

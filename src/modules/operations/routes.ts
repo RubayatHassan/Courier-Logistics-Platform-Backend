@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../infrastructure/prisma.js";
-import { hashPassword } from "../../middleware/auth.js";
-import { authenticate, authorize } from "../../middleware/auth.js";
+import {
+  authenticate,
+  authorize,
+  hashPassword,
+} from "../../middleware/auth.js";
 import { AppError, asyncHandler, ok } from "../../shared/http.js";
 import { parseInput } from "../../shared/validation.js";
 
@@ -52,7 +55,7 @@ operationsRouter.post(
       await prisma.warehouseBranch.findUnique({ where: { code: input.code } })
     )
       throw new AppError(409, "Branch code already exists");
-    return ok(res, await prisma.warehouseBranch.create({ data: input }), 201);
+    return ok(res, await prisma.warehouseBranch.create({ data: input }), 201, "Branch created successfully");
   }),
 );
 
@@ -74,7 +77,7 @@ operationsRouter.post(
       !(await prisma.merchant.findUnique({ where: { id: input.merchantId } }))
     )
       throw new AppError(404, "Merchant not found");
-    return ok(res, await prisma.hub.create({ data: input }), 201);
+    return ok(res, await prisma.hub.create({ data: input }), 201, "Hub created successfully");
   }),
 );
 
@@ -88,7 +91,7 @@ operationsRouter.post(
       })
     )
       throw new AppError(409, "Vehicle plate number already exists");
-    return ok(res, await prisma.vehicle.create({ data: input }), 201);
+    return ok(res, await prisma.vehicle.create({ data: input }), 201, "Vehicle created successfully");
   }),
 );
 
@@ -129,6 +132,7 @@ operationsRouter.post(
         branchId: input.branchId,
       },
       201,
+      "Hub manager created successfully",
     );
   }),
 );
@@ -173,6 +177,7 @@ operationsRouter.post(
         hubId: rider.hubId,
       },
       201,
+      "Rider created successfully",
     );
   }),
 );

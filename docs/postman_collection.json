@@ -289,7 +289,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"riderId\":\"RIDER_ID\",\"vehicleId\":\"VEHICLE_ID\"}"
+              "raw": "{\"riderId\":\"RIDER_ID\"}"
             },
             "url": "{{baseUrl}}/parcels/{{parcelId}}/assign-rider"
           }

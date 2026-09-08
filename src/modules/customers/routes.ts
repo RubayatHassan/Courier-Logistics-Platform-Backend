@@ -67,6 +67,6 @@ customerRouter.post(
         ...(input.email ? { email: input.email } : {}),
       },
     });
-    return ok(res, customer, 201);
+    return ok(res, customer, 201, "Customer created successfully");
   }),
 );

@@ -1,5 +1,5 @@
-import { Router } from "express";
 import type { Request } from "express";
+import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../../infrastructure/prisma.js";
 import { cacheGet, cacheSet } from "../../infrastructure/redis.js";
@@ -60,7 +60,6 @@ const dispatchSchema = z.object({
 });
 const riderAssignmentSchema = z.object({
   riderId: z.uuid(),
-  vehicleId: z.uuid().optional(),
 });
 export const parcelRouter = Router();
 function parcelIdFromRequest(req: Request) {
@@ -247,7 +246,7 @@ parcelRouter.post(
         },
       },
     });
-    if (!parcel || !parcel.currentHub)
+    if (!parcel?.currentHub)
       throw new AppError(404, "Parcel or current hub not found");
     if (
       user.role === "HUB_MANAGER" &&
@@ -297,7 +296,7 @@ parcelRouter.post(
       });
       return updated;
     });
-    return ok(res, result);
+    return ok(res, result, 200, "Parcel dispatched successfully");
   }),
 );
 
@@ -362,7 +361,7 @@ parcelRouter.post(
     const input = parseInput(riderAssignmentSchema, req.body);
     const parcelId = parcelIdFromRequest(req);
     const parcel = await prisma.parcel.findUnique({ where: { id: parcelId } });
-    if (!parcel || !parcel.currentHubId)
+    if (!parcel?.currentHubId)
       throw new AppError(404, "Parcel or current hub not found");
     if (parcel.status !== "AT_HUB")
       throw new AppError(
@@ -387,19 +386,11 @@ parcelRouter.post(
     });
     if (!rider)
       throw new AppError(404, "Available rider not found at this hub");
-    if (
-      input.vehicleId &&
-      !(await prisma.vehicle.findFirst({
-        where: { id: input.vehicleId, isActive: true },
-      }))
-    )
-      throw new AppError(404, "Vehicle not found");
     const result = await prisma.$transaction(async (tx) => {
       const assignment = await tx.deliveryAssignment.create({
         data: {
           parcelId: parcel.id,
           riderId: rider.id,
-          vehicleId: input.vehicleId,
           status: "ASSIGNED",
         },
       });
@@ -417,7 +408,7 @@ parcelRouter.post(
       });
       return assignment;
     });
-    return ok(res, result, 201);
+    return ok(res, result, 201, "Rider assigned successfully");
   }),
 );
 
