@@ -16,6 +16,12 @@ The Prisma schema also contains the full relational ERD layer: users/roles/sessi
 
 The API is available at `http://localhost:4000`. An importable Postman collection is available at `docs/postman_collection.json`.
 
+## Deploy to Vercel
+
+This project exposes the Express app through `api/index.ts` for Vercel. Import the repository into Vercel, keep the default build settings, and add the environment variables from `.env.example` in the Vercel project settings. Set `NODE_ENV=production`, set `APP_URL` to the deployed URL, and set `CLIENT_ORIGIN` to the frontend origin. Use the hosted PostgreSQL and Redis URLs in `DATABASE_URL` and `REDIS_URL`; do not upload `.env`.
+
+Before the first production request, apply the SQL in `prisma/manual-migrations/20260908000000_add_hub_transfer_vehicle_id.sql` to the production database and redeploy. The production API base URL will be `https://<your-project>.vercel.app/api/v1`.
+
 ## Email authentication
 
 Registration does not log the user in immediately. The account remains unverified until the emailed six-digit code or verification link is submitted to `/api/v1/auth/verify-email`. Login is blocked for unverified users.
