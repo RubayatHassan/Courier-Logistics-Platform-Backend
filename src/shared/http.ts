@@ -53,13 +53,20 @@ export function errorHandler(
         )
       : error instanceof AppError
         ? error
-        : prismaCode === "P1001" || prismaCode === "P1002" || prismaCode === "P1017"
+        : prismaCode === "P1001" ||
+            prismaCode === "P1002" ||
+            prismaCode === "P1017"
           ? new AppError(503, "Database unavailable")
-          : prismaCode === "P2021" || prismaCode === "P2022"
+          : prismaCode === "P2007" || prismaCode === "P2021" || prismaCode === "P2022"
             ? new AppError(503, "Database schema is out of date")
             : prismaCode === "P2003"
               ? new AppError(409, "Related record does not exist")
-              : new AppError(500, "Internal server error");
+              : prismaCode === "P2002"
+                ? new AppError(
+                    409,
+                    "A record with the same unique value already exists",
+                  )
+                : new AppError(500, "Internal server error");
   const requestId = (req as Request & { id?: string }).id;
   if (appError.statusCode >= 500) console.error({ error, requestId });
   const errors = Array.isArray(appError.details)
@@ -67,5 +74,7 @@ export function errorHandler(
     : appError.details
       ? [appError.details]
       : [{ requestId }];
-  res.status(appError.statusCode).json({ success: false, message: appError.message, errors });
+  res
+    .status(appError.statusCode)
+    .json({ success: false, message: appError.message, errors });
 }
