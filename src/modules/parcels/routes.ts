@@ -156,6 +156,7 @@ parcelRouter.post(
         idempotencyKey: req.header("idempotency-key") ?? undefined,
       }),
       201,
+      "Parcel created successfully",
     );
   }),
 );
