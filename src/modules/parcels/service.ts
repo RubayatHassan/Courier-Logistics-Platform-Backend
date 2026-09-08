@@ -19,6 +19,24 @@ const transitions: Record<ParcelStatus, ParcelStatus[]> = {
   LOST_DAMAGED: [],
 };
 
+const roleTransitions: Record<
+  NonNullable<Parameters<typeof transitionParcel>[5]>,
+  ParcelStatus[]
+> = {
+  SUPER_ADMIN: Object.keys(transitions) as ParcelStatus[],
+  ADMIN: Object.keys(transitions) as ParcelStatus[],
+  MERCHANT: ["CANCELLED"],
+  HUB_MANAGER: ["IN_TRANSIT", "SORTING", "OUT_FOR_DELIVERY", "LOST_DAMAGED"],
+  RIDER: [
+    "PICKED_UP",
+    "DELIVERED",
+    "DELIVERY_FAILED",
+    "RESCHEDULED",
+    "RETURNED",
+  ],
+  CUSTOMER: ["CANCELLED"],
+};
+
 export async function createParcel(input: {
   merchantId: string;
   customerId: string;
@@ -117,18 +135,42 @@ export async function transitionParcel(
       409,
       `Cannot move parcel from ${parcel.status} to ${status}`,
     );
+  if (role && !roleTransitions[role].includes(status))
+    throw new AppError(403, "Your role cannot perform this parcel transition");
   return prisma.$transaction(async (tx) => {
-    const updated = await tx.parcel.update({
-      where: { id },
+    const onlinePayment =
+      status === "DELIVERED"
+        ? await tx.payment.findFirst({
+            where: { parcelId: id, method: "ONLINE" },
+            orderBy: { createdAt: "desc" },
+          })
+        : null;
+    if (onlinePayment?.status === "PENDING")
+      throw new AppError(
+        409,
+        "Online payment must be completed before delivery",
+      );
+    const changed = await tx.parcel.updateMany({
+      where: { id, status: parcel.status },
       data: {
         status,
         deliveredAt: status === "DELIVERED" ? new Date() : undefined,
       },
     });
+    if (changed.count !== 1)
+      throw new AppError(409, "Parcel status changed; retry the transition");
     await tx.trackingEvent.create({
       data: { parcelId: id, status, actorId, note },
     });
-    if (status === "DELIVERED" && Number(parcel.codAmount) > 0)
+    if (
+      status === "DELIVERED" &&
+      Number(parcel.codAmount) > 0 &&
+      onlinePayment?.status !== "PAID"
+    ) {
+      await tx.payment.updateMany({
+        where: { parcelId: id, method: "COD", status: "PENDING" },
+        data: { status: "PAID" },
+      });
       await tx.codLedger.create({
         data: {
           merchantId: parcel.merchantId,
@@ -137,6 +179,7 @@ export async function transitionParcel(
           amount: parcel.codAmount,
         },
       });
-    return updated;
+    }
+    return tx.parcel.findUniqueOrThrow({ where: { id } });
   });
 }

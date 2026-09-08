@@ -440,6 +440,18 @@
             "body": { "mode": "raw", "raw": "{\"parcelId\":\"{{parcelId}}\"}" },
             "url": "{{baseUrl}}/payments/stripe/checkout"
           }
+        },
+        {
+          "name": "Customer Stripe Checkout at Delivery",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"trackingNumber\":\"{{trackingNumber}}\",\"phone\":\"{{customerPhone}}\"}"
+            },
+            "url": "{{baseUrl}}/payments/stripe/customer-checkout"
+          }
         }
       ]
     }

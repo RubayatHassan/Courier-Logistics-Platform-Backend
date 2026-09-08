@@ -88,6 +88,15 @@
       "method": "POST",
       "path": "/payments/stripe/checkout",
       "body": { "parcelId": "{{parcelId}}" }
+    },
+    {
+      "name": "Customer Stripe checkout at delivery",
+      "method": "POST",
+      "path": "/payments/stripe/customer-checkout",
+      "body": {
+        "trackingNumber": "{{trackingNumber}}",
+        "phone": "{{customerPhone}}"
+      }
     }
   ]
 }
