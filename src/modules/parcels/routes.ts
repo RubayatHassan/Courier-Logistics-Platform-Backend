@@ -180,7 +180,11 @@ parcelRouter.post(
       where: {
         id: hubId,
         isActive: true,
-        ...(user.role === "MERCHANT" ? { merchantId: user.merchantId } : {}),
+        ...(user.role === "MERCHANT"
+          ? {
+              OR: [{ merchantId: user.merchantId }, { merchantId: null }],
+            }
+          : {}),
       },
     });
     if (!hub) throw new AppError(404, "Origin hub not found");
@@ -258,7 +262,7 @@ parcelRouter.post(
       where: {
         id: input.destinationHubId,
         isActive: true,
-        ...(parcel.merchantId ? { merchantId: parcel.merchantId } : {}),
+        OR: [{ merchantId: parcel.merchantId }, { merchantId: null }],
       },
     });
     if (!destination) throw new AppError(404, "Destination hub not found");
