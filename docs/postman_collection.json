@@ -4,7 +4,10 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5000/api/v1" },
+    {
+      "key": "baseUrl",
+      "value": "https://courier-logistics-platform-api.vercel.app/api/v1"
+    },
     { "key": "accessToken", "value": "" },
     { "key": "trackingNumber", "value": "CLP..." },
     { "key": "parcelId", "value": "" },
@@ -12,7 +15,8 @@
     { "key": "originHubId", "value": "" },
     { "key": "destinationHubId", "value": "" },
     { "key": "vehicleId", "value": "" },
-    { "key": "riderId", "value": "" }
+    { "key": "riderId", "value": "" },
+    { "key": "customerPhone", "value": "01800000000" }
   ],
   "item": [
     {
@@ -20,11 +24,17 @@
       "item": [
         {
           "name": "Health",
-          "request": { "method": "GET", "url": "http://localhost:5000/health" }
+          "request": {
+            "method": "GET",
+            "url": "https://courier-logistics-platform-api.vercel.app/health"
+          }
         },
         {
           "name": "Readiness",
-          "request": { "method": "GET", "url": "http://localhost:5000/ready" }
+          "request": {
+            "method": "GET",
+            "url": "https://courier-logistics-platform-api.vercel.app/ready"
+          }
         }
       ]
     },
