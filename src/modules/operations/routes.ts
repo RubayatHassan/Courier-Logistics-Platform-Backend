@@ -55,7 +55,12 @@ operationsRouter.post(
       await prisma.warehouseBranch.findUnique({ where: { code: input.code } })
     )
       throw new AppError(409, "Branch code already exists");
-    return ok(res, await prisma.warehouseBranch.create({ data: input }), 201, "Branch created successfully");
+    return ok(
+      res,
+      await prisma.warehouseBranch.create({ data: input }),
+      201,
+      "Branch created successfully",
+    );
   }),
 );
 
@@ -77,7 +82,12 @@ operationsRouter.post(
       !(await prisma.merchant.findUnique({ where: { id: input.merchantId } }))
     )
       throw new AppError(404, "Merchant not found");
-    return ok(res, await prisma.hub.create({ data: input }), 201, "Hub created successfully");
+    return ok(
+      res,
+      await prisma.hub.create({ data: input }),
+      201,
+      "Hub created successfully",
+    );
   }),
 );
 
@@ -91,7 +101,12 @@ operationsRouter.post(
       })
     )
       throw new AppError(409, "Vehicle plate number already exists");
-    return ok(res, await prisma.vehicle.create({ data: input }), 201, "Vehicle created successfully");
+    return ok(
+      res,
+      await prisma.vehicle.create({ data: input }),
+      201,
+      "Vehicle created successfully",
+    );
   }),
 );
 

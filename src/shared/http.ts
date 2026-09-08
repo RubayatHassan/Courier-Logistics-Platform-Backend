@@ -75,22 +75,31 @@ export function errorHandler(
             prismaCode === "P1002" ||
             prismaCode === "P1017"
           ? new AppError(503, "Database unavailable")
-          : prismaCode === "P2007" || prismaCode === "P2021" || prismaCode === "P2022"
+          : prismaCode === "P2007" ||
+              prismaCode === "P2021" ||
+              prismaCode === "P2022"
             ? new AppError(503, "Database schema is out of date")
             : prismaCode === "P2003"
               ? new AppError(409, "Related record does not exist", [
-                  { field: relationTarget, message: "Related record does not exist" },
+                  {
+                    field: relationTarget,
+                    message: "Related record does not exist",
+                  },
                 ])
               : prismaCode === "P2025"
                 ? new AppError(404, "Requested record was not found")
-              : prismaCode === "P2002"
-                ? new AppError(409, "A record with the same unique value already exists", [
-                    {
-                      field: uniqueTarget,
-                      message: `The value for ${uniqueTarget} is already in use`,
-                    },
-                  ])
-                : new AppError(500, "Internal server error");
+                : prismaCode === "P2002"
+                  ? new AppError(
+                      409,
+                      "A record with the same unique value already exists",
+                      [
+                        {
+                          field: uniqueTarget,
+                          message: `The value for ${uniqueTarget} is already in use`,
+                        },
+                      ],
+                    )
+                  : new AppError(500, "Internal server error");
   const requestId = (req as Request & { id?: string }).id;
   if (appError.statusCode >= 500) console.error({ error, requestId });
   const errors = Array.isArray(appError.details)
@@ -105,5 +114,9 @@ export function errorHandler(
   );
   res
     .status(appError.statusCode)
-    .json({ success: false, message: appError.message, errors: errorsWithRequestId });
+    .json({
+      success: false,
+      message: appError.message,
+      errors: errorsWithRequestId,
+    });
 }
