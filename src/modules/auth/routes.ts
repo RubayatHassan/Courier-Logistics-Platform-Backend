@@ -35,17 +35,21 @@ import { parseInput } from "../../shared/validation.js";
 const passwordSchema = z
   .string()
   .min(8, "Password must be at least 8 characters");
+const emailSchema = z.email().transform((value) => value.trim().toLowerCase());
 const registerSchema = z.object({
-  email: z.email().transform((value) => value.toLowerCase()),
+  email: emailSchema,
   password: passwordSchema,
   name: z.string().min(2),
   phone: z.string().optional(),
   merchantName: z.string().min(2).optional(),
 });
-const loginSchema = z.object({ email: z.email(), password: z.string().min(1) });
+const loginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1),
+});
 const googleSchema = z.object({ credential: z.string().min(20) });
 const adminCreateSchema = z.object({
-  email: z.email().transform((value) => value.toLowerCase()),
+  email: emailSchema,
   password: passwordSchema,
   name: z.string().min(2),
 });
@@ -59,7 +63,7 @@ const profileUpdateSchema = z
   });
 const emailActionSchema = z
   .object({
-    email: z.email().optional(),
+    email: emailSchema.optional(),
     code: z
       .string()
       .regex(/^\d{6}$/)
@@ -70,11 +74,11 @@ const emailActionSchema = z
     (input) => input.code || input.token,
     "A verification code or token is required",
   );
-const forgotSchema = z.object({ email: z.email() });
+const forgotSchema = z.object({ email: emailSchema });
 const resetSchema = z
   .object({
     password: passwordSchema,
-    email: z.email().optional(),
+    email: emailSchema.optional(),
     code: z
       .string()
       .regex(/^\d{6}$/)
