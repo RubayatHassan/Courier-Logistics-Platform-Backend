@@ -15,7 +15,9 @@ const transporter = env.SMTP_HOST
 
 export async function sendEmail(to: string, subject: string, html: string) {
   if (!transporter) {
-    console.info(`[dev-mail] from=${env.MAIL_FROM} to=${to} subject=${subject}\n${html}`);
+    console.info(
+      `[dev-mail] from=${env.MAIL_FROM} to=${to} subject=${subject}\n${html}`,
+    );
     return;
   }
   await transporter.sendMail({ from: env.MAIL_FROM, to, subject, html });

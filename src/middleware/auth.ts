@@ -35,14 +35,21 @@ export function setRefreshCookie(res: Response, token: string) {
   });
 }
 
-export function authenticate(req: Request, _res: Response, next: NextFunction) {
+export async function authenticate(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+) {
   const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) return next(new AppError(401, "Authentication required"));
   try {
-    (req as AuthenticatedRequest).user = jwt.verify(
-      token,
-      env.JWT_ACCESS_SECRET,
-    ) as AuthUser;
+    const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as AuthUser;
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: { id: true, email: true, role: true, merchantId: true },
+    });
+    if (!user) return next(new AppError(401, "User not found"));
+    (req as AuthenticatedRequest).user = user;
     next();
   } catch {
     next(new AppError(401, "Invalid or expired access token"));

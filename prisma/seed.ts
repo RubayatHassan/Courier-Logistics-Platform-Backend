@@ -96,7 +96,9 @@ const hubManagerUser = await prisma.user.upsert({
   },
 });
 await prisma.userBranch.upsert({
-  where: { userId_branchId: { userId: hubManagerUser.id, branchId: branch.id } },
+  where: {
+    userId_branchId: { userId: hubManagerUser.id, branchId: branch.id },
+  },
   update: {},
   create: { userId: hubManagerUser.id, branchId: branch.id },
 });
@@ -114,10 +116,16 @@ const riderUser = await prisma.user.upsert({
 await prisma.rider.upsert({
   where: { userId: riderUser.id },
   update: { hubId: destinationHub.id, isAvailable: true },
-  create: { userId: riderUser.id, hubId: destinationHub.id, vehicleType: "Motorbike" },
+  create: {
+    userId: riderUser.id,
+    hubId: destinationHub.id,
+    vehicleType: "Motorbike",
+  },
 });
 const customer = await prisma.customer.upsert({
-  where: { merchantId_phone: { merchantId: merchant.id, phone: "01800000000" } },
+  where: {
+    merchantId_phone: { merchantId: merchant.id, phone: "01800000000" },
+  },
   update: { name: "Demo Customer", email: "customer@example.com" },
   create: {
     merchantId: merchant.id,

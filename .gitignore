@@ -4,3 +4,5 @@ dist
 coverage
 .pnpm-store
 .DS_Store
+
+.vercel

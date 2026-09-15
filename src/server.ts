@@ -1,7 +1,7 @@
 import { app } from "./app.js";
 import { env } from "./config/env.js";
-import { connectRedis } from "./infrastructure/redis.js";
 import { prisma } from "./infrastructure/prisma.js";
+import { connectRedis } from "./infrastructure/redis.js";
 import { hashPassword } from "./middleware/auth.js";
 
 async function ensureSuperAdmin() {
