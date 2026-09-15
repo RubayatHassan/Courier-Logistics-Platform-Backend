@@ -1,0 +1,17 @@
+import type { Request, Response } from "express";
+import { z } from "zod";
+import { ok } from "../../shared/http.js";
+import { parseInput } from "../../shared/validation.js";
+import { createBranch, createHub, createHubManager, createRider, createVehicle, listHubs, listVehicles } from "./service.js";
+const branch = z.object({ name: z.string().min(2), code: z.string().min(2).max(20), type: z.string().min(2), phone: z.string().optional(), email: z.email().optional() });
+const hub = branch.extend({ address: z.string().min(5), city: z.string().min(2), branchId: z.uuid().optional(), merchantId: z.uuid().optional() });
+const vehicle = z.object({ type: z.string().min(2), plateNumber: z.string().min(3), capacityKg: z.number().positive().optional() });
+const manager = z.object({ email: z.email().transform((v) => v.toLowerCase()), password: z.string().min(8), name: z.string().min(2), branchId: z.uuid() });
+const rider = z.object({ email: z.email().transform((v) => v.toLowerCase()), password: z.string().min(8), name: z.string().min(2), phone: z.string().min(7).max(20).optional(), hubId: z.uuid(), vehicleType: z.string().optional() });
+export const postBranch = async (req: Request, res: Response) => ok(res, await createBranch(parseInput(branch, req.body)), 201, "Branch created successfully");
+export const postHub = async (req: Request, res: Response) => ok(res, await createHub(parseInput(hub, req.body)), 201, "Hub created successfully");
+export const postVehicle = async (req: Request, res: Response) => ok(res, await createVehicle(parseInput(vehicle, req.body)), 201, "Vehicle created successfully");
+export const postHubManager = async (req: Request, res: Response) => ok(res, await createHubManager(parseInput(manager, req.body)), 201, "Hub manager created successfully");
+export const postRider = async (req: Request, res: Response) => ok(res, await createRider(parseInput(rider, req.body)), 201, "Rider created successfully");
+export const getHubs = async (_req: Request, res: Response) => ok(res, await listHubs());
+export const getVehicles = async (_req: Request, res: Response) => ok(res, await listVehicles());
