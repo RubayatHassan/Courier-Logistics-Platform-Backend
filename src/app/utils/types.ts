@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import type { Role } from "../generated/prisma/client.js";
+import type { Role } from "../../generated/prisma/client.js";
 
 export type AuthUser = {
   id: string;

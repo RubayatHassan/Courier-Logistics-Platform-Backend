@@ -3,8 +3,8 @@ import cors from "cors";
 import type { Express, NextFunction, Request, Response } from "express";
 import helmet from "helmet";
 import { env } from "../config/env.js";
-import { AppError } from "../shared/http.js";
-import type { AuthenticatedRequest } from "../shared/types.js";
+import { AppError } from "../utils/http.js";
+import type { AuthenticatedRequest } from "../utils/types.js";
 
 export function registerCoreMiddleware(app: Express) {
   app.use(helmet());

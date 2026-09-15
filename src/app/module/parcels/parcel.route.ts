@@ -1,12 +1,12 @@
 import type { Request } from "express";
 import { Router } from "express";
 import { z } from "zod";
-import { prisma } from "../../infrastructure/prisma.js";
-import { cacheGet, cacheSet } from "../../infrastructure/redis.js";
+import { prisma } from "../../lib/prisma.js";
+import { cacheGet, cacheSet } from "../../lib/redis.js";
 import { authenticate, authorize } from "../../middleware/auth.js";
-import { AppError, asyncHandler, ok } from "../../shared/http.js";
-import type { AuthenticatedRequest } from "../../shared/types.js";
-import { parseInput } from "../../shared/validation.js";
+import { AppError, asyncHandler, ok } from "../../utils/http.js";
+import type { AuthenticatedRequest } from "../../utils/types.js";
+import { parseInput } from "../../utils/validation.js";
 import { createParcel, transitionParcel } from "./service.js";
 
 const createSchema = z.object({

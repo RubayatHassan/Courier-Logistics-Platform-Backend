@@ -1,14 +1,14 @@
 import cookieParser from "cookie-parser";
 import express from "express";
-import { env } from "./config/env.js";
-import { prisma } from "./infrastructure/prisma.js";
-import { notFound, registerCoreMiddleware } from "./middleware/core.js";
-import { authRouter } from "./modules/auth/routes.js";
-import { customerRouter } from "./modules/customers/routes.js";
-import { operationsRouter } from "./modules/operations/routes.js";
-import { parcelRouter } from "./modules/parcels/routes.js";
-import { paymentRouter } from "./modules/payments/routes.js";
-import { errorHandler, ok } from "./shared/http.js";
+import { env } from "./app/config/env.js";
+import { prisma } from "./app/lib/prisma.js";
+import { notFound, registerCoreMiddleware } from "./app/middleware/core.js";
+import { authRouter } from "./app/module/auth/auth.route.js";
+import { customerRouter } from "./app/module/customers/customer.route.js";
+import { operationsRouter } from "./app/module/operations/operations.route.js";
+import { parcelRouter } from "./app/module/parcels/parcel.route.js";
+import { paymentRouter } from "./app/module/payments/payment.route.js";
+import { errorHandler, ok } from "./app/utils/http.js";
 
 export const app = express();
 registerCoreMiddleware(app);

@@ -2,10 +2,10 @@ import bcrypt from "bcryptjs";
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
-import type { Role } from "../generated/prisma/client.js";
-import { prisma } from "../infrastructure/prisma.js";
-import { AppError } from "../shared/http.js";
-import type { AuthenticatedRequest, AuthUser } from "../shared/types.js";
+import type { Role } from "../../generated/prisma/client.js";
+import { prisma } from "../lib/prisma.js";
+import { AppError } from "../utils/http.js";
+import type { AuthenticatedRequest, AuthUser } from "../utils/types.js";
 
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);

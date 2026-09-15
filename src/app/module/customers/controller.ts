@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { AppError, ok } from "../../shared/http.js";
-import type { AuthenticatedRequest } from "../../shared/types.js";
-import { parseInput } from "../../shared/validation.js";
+import { AppError, ok } from "../../utils/http.js";
+import type { AuthenticatedRequest } from "../../utils/types.js";
+import { parseInput } from "../../utils/validation.js";
 import { createCustomer, listCustomers } from "./service.js";
 
 const createCustomerSchema = z.object({

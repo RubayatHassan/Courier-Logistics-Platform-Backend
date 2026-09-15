@@ -1,5 +1,5 @@
-import { prisma } from "../../infrastructure/prisma.js";
-import { AppError } from "../../shared/http.js";
+import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/http.js";
 import type { CreateCustomerInput, CustomerActor } from "./interface.js";
 
 function resolveMerchantId(actor: CustomerActor, requestedMerchantId?: string) {

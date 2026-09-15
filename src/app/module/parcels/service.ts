@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
-import type { ParcelStatus } from "../../generated/prisma/client.js";
-import { prisma } from "../../infrastructure/prisma.js";
-import { AppError } from "../../shared/http.js";
+import type { ParcelStatus } from "../../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { AppError } from "../../utils/http.js";
 
 const transitions: Record<ParcelStatus, ParcelStatus[]> = {
   CREATED: ["PICKUP_ASSIGNED", "CANCELLED"],

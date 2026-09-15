@@ -5,19 +5,19 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { env } from "../../config/env.js";
-import type { Role } from "../../generated/prisma/client.js";
+import type { Role } from "../../../generated/prisma/client.js";
 import {
   passwordResetEmail,
   sendEmail,
   verificationEmail,
-} from "../../infrastructure/mail.js";
-import { prisma } from "../../infrastructure/prisma.js";
+} from "../../lib/mail.js";
+import { prisma } from "../../lib/prisma.js";
 import {
   cacheGet,
   cacheSet,
   connectRedis,
   redis,
-} from "../../infrastructure/redis.js";
+} from "../../lib/redis.js";
 import {
   authenticate,
   authorize,
@@ -28,9 +28,9 @@ import {
   signRefreshToken,
   verifyPassword,
 } from "../../middleware/auth.js";
-import { AppError, asyncHandler, ok } from "../../shared/http.js";
-import type { AuthenticatedRequest } from "../../shared/types.js";
-import { parseInput } from "../../shared/validation.js";
+import { AppError, asyncHandler, ok } from "../../utils/http.js";
+import type { AuthenticatedRequest } from "../../utils/types.js";
+import { parseInput } from "../../utils/validation.js";
 
 const passwordSchema = z
   .string()

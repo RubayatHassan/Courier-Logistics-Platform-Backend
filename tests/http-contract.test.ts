@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ok } from "../src/shared/http.js";
+import { ok } from "../src/app/utils/http.js";
 
 describe("HTTP response envelope", () => {
   it("returns the required success shape", () => {

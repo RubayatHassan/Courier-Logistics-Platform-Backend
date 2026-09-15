@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../../middleware/auth.js";
-import { asyncHandler } from "../../shared/http.js";
+import { asyncHandler } from "../../utils/http.js";
 import { getHubs, getVehicles, postBranch, postHub, postHubManager, postRider, postVehicle } from "./controller.js";
 
 export const operationsRouter = Router();

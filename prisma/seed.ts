@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
-import { env } from "../src/config/env.js";
-import { prisma } from "../src/infrastructure/prisma.js";
+import { env } from "../src/app/config/env.js";
+import { prisma } from "../src/app/lib/prisma.js";
 
 const passwordHash = await bcrypt.hash("Password123!", env.BCRYPT_SALT_ROUNDS);
 for (const [name, description] of [

@@ -1,6 +1,6 @@
-import { prisma } from "../../infrastructure/prisma.js";
+import { prisma } from "../../lib/prisma.js";
 import { hashPassword } from "../../middleware/auth.js";
-import { AppError } from "../../shared/http.js";
+import { AppError } from "../../utils/http.js";
 import type { BranchInput, HubInput, HubManagerInput, RiderInput, VehicleInput } from "./interface.js";
 export async function createBranch(input: BranchInput) { if (await prisma.warehouseBranch.findUnique({ where: { code: input.code } })) throw new AppError(409, "Branch code already exists"); return prisma.warehouseBranch.create({ data: input }); }
 export async function createHub(input: HubInput) { if (await prisma.hub.findUnique({ where: { code: input.code } })) throw new AppError(409, "Hub code already exists"); if (input.branchId && !(await prisma.warehouseBranch.findUnique({ where: { id: input.branchId } }))) throw new AppError(404, "Branch not found"); if (input.merchantId && !(await prisma.merchant.findUnique({ where: { id: input.merchantId } }))) throw new AppError(404, "Merchant not found"); return prisma.hub.create({ data: input }); }

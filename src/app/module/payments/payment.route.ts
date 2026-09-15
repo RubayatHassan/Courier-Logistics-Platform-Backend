@@ -2,11 +2,11 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { env } from "../../config/env.js";
-import type { Parcel } from "../../generated/prisma/client.js";
-import { prisma } from "../../infrastructure/prisma.js";
+import type { Parcel } from "../../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
 import { authenticate, authorize } from "../../middleware/auth.js";
-import { AppError, asyncHandler, ok } from "../../shared/http.js";
-import type { AuthenticatedRequest } from "../../shared/types.js";
+import { AppError, asyncHandler, ok } from "../../utils/http.js";
+import type { AuthenticatedRequest } from "../../utils/types.js";
 
 const checkoutSchema = z.object({ parcelId: z.uuid() });
 const customerCheckoutSchema = z.object({

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { ok } from "../../shared/http.js";
-import { parseInput } from "../../shared/validation.js";
+import { ok } from "../../utils/http.js";
+import { parseInput } from "../../utils/validation.js";
 import { createBranch, createHub, createHubManager, createRider, createVehicle, listHubs, listVehicles } from "./service.js";
 const branch = z.object({ name: z.string().min(2), code: z.string().min(2).max(20), type: z.string().min(2), phone: z.string().optional(), email: z.email().optional() });
 const hub = branch.extend({ address: z.string().min(5), city: z.string().min(2), branchId: z.uuid().optional(), merchantId: z.uuid().optional() });
