@@ -2,11 +2,15 @@ import crypto from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { env } from "../../config/env.js";
-import type { Parcel } from "../../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { authenticate, authorize } from "../../middleware/auth.js";
 import { AppError, asyncHandler, ok } from "../../utils/http.js";
 import type { AuthenticatedRequest } from "../../utils/types.js";
+import {
+  type CheckoutSession,
+  createStripeCheckout,
+  reconcileCheckout,
+} from "./service.js";
 
 const checkoutSchema = z.object({ parcelId: z.uuid() });
 const customerCheckoutSchema = z.object({
@@ -14,72 +18,6 @@ const customerCheckoutSchema = z.object({
   phone: z.string().trim().min(7),
 });
 export const paymentRouter = Router();
-
-async function createStripeCheckout(
-  parcel: Pick<Parcel, "id" | "trackingNumber" | "codAmount">,
-) {
-  if (!env.STRIPE_SECRET_KEY)
-    throw new AppError(503, "Stripe payments are not configured");
-  if (Number(parcel.codAmount) <= 0)
-    throw new AppError(400, "Only positive parcel amounts can be paid online");
-
-  const existingPayment = await prisma.payment.findFirst({
-    where: {
-      parcelId: parcel.id,
-      method: "ONLINE",
-      status: { in: ["PENDING", "PAID"] },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  if (existingPayment?.status === "PAID")
-    throw new AppError(409, "This parcel has already been paid");
-  if (existingPayment?.providerReference)
-    throw new AppError(409, "A payment checkout is already in progress");
-
-  const body = new URLSearchParams({
-    mode: "payment",
-    success_url: env.STRIPE_SUCCESS_URL,
-    cancel_url: env.STRIPE_CANCEL_URL,
-    "line_items[0][price_data][currency]": "bdt",
-    "line_items[0][price_data][product_data][name]": `Parcel ${parcel.trackingNumber}`,
-    "line_items[0][price_data][unit_amount]": String(
-      Math.round(Number(parcel.codAmount) * 100),
-    ),
-    "line_items[0][quantity]": "1",
-    "metadata[parcelId]": parcel.id,
-    "metadata[trackingNumber]": parcel.trackingNumber,
-  });
-  const stripeResponse = await fetch(
-    "https://api.stripe.com/v1/checkout/sessions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body,
-    },
-  );
-  const session = (await stripeResponse.json()) as {
-    id?: string;
-    url?: string;
-    error?: { message?: string };
-  };
-  if (!stripeResponse.ok || !session.id || !session.url)
-    throw new AppError(
-      502,
-      session.error?.message ?? "Stripe checkout could not be created",
-    );
-  await prisma.payment.create({
-    data: {
-      parcelId: parcel.id,
-      amount: parcel.codAmount,
-      method: "ONLINE",
-      providerReference: session.id,
-    },
-  });
-  return { checkoutSessionId: session.id, checkoutUrl: session.url };
-}
 
 paymentRouter.post(
   "/stripe/customer-checkout",
@@ -103,7 +41,7 @@ paymentRouter.post(
       );
     return ok(
       res,
-      await createStripeCheckout(parcel),
+      await createStripeCheckout(parcel.id, true),
       201,
       "Customer payment checkout created successfully",
     );
@@ -117,16 +55,20 @@ paymentRouter.post(
   asyncHandler(async (req, res) => {
     const { parcelId } = checkoutSchema.parse(req.body);
     const user = (req as AuthenticatedRequest).user;
+    if (!user || (user.role === "MERCHANT" && !user.merchantId))
+      throw new AppError(403, "Merchant context required");
     const parcel = await prisma.parcel.findFirst({
       where: {
         id: parcelId,
-        ...(user?.merchantId ? { merchantId: user.merchantId } : {}),
+        ...(user.role === "MERCHANT"
+          ? { merchantId: user.merchantId ?? "__no_access__" }
+          : {}),
       },
     });
     if (!parcel) throw new AppError(404, "Parcel not found");
     return ok(
       res,
-      await createStripeCheckout(parcel),
+      await createStripeCheckout(parcel.id),
       201,
       "Stripe checkout created successfully",
     );
@@ -140,11 +82,15 @@ paymentRouter.post(
       throw new AppError(503, "Stripe webhook is not configured");
     const signature = req.header("stripe-signature");
     if (!signature) throw new AppError(400, "Stripe signature is required");
-    const raw = Buffer.isBuffer(req.body)
-      ? req.body.toString("utf8")
-      : JSON.stringify(req.body);
+    if (!Buffer.isBuffer(req.body))
+      throw new AppError(400, "Raw webhook body is required");
+    const raw = req.body.toString("utf8");
     const timestamp = signature.match(/t=(\d+)/)?.[1];
-    const provided = signature.match(/v1=([^,]+)/)?.[1];
+    const signatures = signature
+      .split(",")
+      .map((part) => part.trim())
+      .filter((part) => part.startsWith("v1="))
+      .map((part) => part.slice(3));
     const timestampSeconds = timestamp ? Number(timestamp) : NaN;
     if (
       !Number.isFinite(timestampSeconds) ||
@@ -158,25 +104,30 @@ paymentRouter.post(
           .digest("hex")
       : "";
     if (
-      !provided ||
       !timestamp ||
-      provided.length !== expected.length ||
-      !crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
+      !signatures.some(
+        (provided) =>
+          /^[a-f0-9]{64}$/i.test(provided) &&
+          crypto.timingSafeEqual(
+            Buffer.from(provided, "hex"),
+            Buffer.from(expected, "hex"),
+          ),
+      )
     )
       throw new AppError(400, "Invalid Stripe signature");
-    const event = JSON.parse(raw) as {
+    let event: {
       type?: string;
-      data?: { object?: { id?: string; payment_status?: string } };
+      data?: { object?: CheckoutSession };
     };
-    if (
-      event.type === "checkout.session.completed" &&
-      event.data?.object?.id &&
-      event.data.object.payment_status === "paid"
-    )
-      await prisma.payment.updateMany({
-        where: { providerReference: event.data.object.id, status: "PENDING" },
-        data: { status: "PAID" },
-      });
+    try {
+      event = JSON.parse(raw);
+    } catch {
+      throw new AppError(400, "Invalid webhook JSON");
+    }
+    if (!event || typeof event !== "object")
+      throw new AppError(400, "Invalid webhook event");
+    if (event.type && event.data?.object)
+      await reconcileCheckout(event.data.object, event.type);
     return ok(res, { received: true });
   }),
 );

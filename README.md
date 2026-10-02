@@ -1,6 +1,8 @@
 # Courier & Logistics Platform API
 
-Industry-oriented modular monolith for merchant parcel booking, hub operations, rider delivery, tracking and COD settlement.
+Modular monolith for merchant parcel booking, hub operations, rider delivery, tracking and COD collection. Settlement, refunds and the Order/Shipment layer currently have database models but no operational API workflows.
+
+See [API workflow audit](docs/api-workflow-audit.md) for the API-to-API dependency map, fixes, test coverage, remaining production gaps and rollout requirements.
 
 The Prisma schema also contains the full relational ERD layer: users/roles/sessions, orders/shipments/items, addresses and master data, assignments/riders/vehicles/locations, payment methods/invoices, notifications/templates/logs, returns/refunds/claims, audit/system settings, and the requested many-to-many junction tables.
 
@@ -62,7 +64,11 @@ The environment-configured super administrator is bootstrapped on server startup
 
 Google Cloud login requires a Google OAuth web client ID in `GOOGLE_CLIENT_ID`. The API verifies the Google ID token against Google's tokeninfo endpoint before creating or signing in the customer.
 
-Stripe checkout requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Checkout sessions are created against Stripe's live API (test keys are recommended for evaluation), and only signed `checkout.session.completed` webhooks mark a payment as paid. There are no simulated payment success paths.
+Stripe checkout requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Checkout sessions use a durable payment ID as the provider idempotency key. Signed completed/async-success webhooks or an authenticated provider session lookup confirm payment after amount/currency validation. Expired/async-failed sessions release the pending payment for retry. The success landing page only reads local payment status. There are no simulated payment success paths.
+
+Redis is required for authentication rate limits; protected authentication actions return 503 if Redis is unavailable. Production email requires SMTP and never prints verification/reset secrets as development previews. Configure trusted proxy handling for the actual deployment before relying on per-client IP limits; forwarded headers are not blindly trusted.
+
+After the refresh-token security update, existing sessions using the old bcrypt token hash must log in again. New refresh tokens use SHA-256 fingerprints, random token IDs, atomic single-use rotation and cookie/database expiry derived from the configured token TTL. No schema migration is required for these code changes.
 
 ## API conventions
 

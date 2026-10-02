@@ -1,5 +1,6 @@
 {
-  "baseUrl": "http://localhost:5000/api/v1",
+  "baseUrl": "http://localhost:4000/api/v1",
+  "notes": "Run the steps as a COD workflow. Each login replaces the Bearer access token. assign-rider already changes status to OUT_FOR_DELIVERY. For online payment, run one optional checkout after assignment and wait for the signed paid webhook BEFORE delivery; skip COD collection. Never start checkout after delivery.",
   "credentials": {
     "merchant": { "email": "merchant@example.com", "password": "Password123!" },
     "hubManager": {
@@ -69,12 +70,12 @@
       }
     },
     {
-      "name": "Out for delivery",
-      "method": "PATCH",
-      "path": "/parcels/{{parcelId}}/status",
+      "name": "Login assigned rider",
+      "method": "POST",
+      "path": "/auth/login",
       "body": {
-        "status": "OUT_FOR_DELIVERY",
-        "note": "Rider left destination hub"
+        "email": "rider@example.com",
+        "password": "Password123!"
       }
     },
     {
@@ -82,9 +83,11 @@
       "method": "PATCH",
       "path": "/parcels/{{parcelId}}/status",
       "body": { "status": "DELIVERED", "note": "Delivered to customer" }
-    },
+    }
+  ],
+  "optionalOnlinePaymentBeforeDelivery": [
     {
-      "name": "Stripe checkout",
+      "name": "Stripe checkout (use merchant or admin token)",
       "method": "POST",
       "path": "/payments/stripe/checkout",
       "body": { "parcelId": "{{parcelId}}" }

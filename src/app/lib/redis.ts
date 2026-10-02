@@ -7,8 +7,13 @@ export const redis = createClient({
 });
 redis.on("error", (error) => console.error("Redis error", error));
 
+let connection: Promise<unknown> | undefined;
 export async function connectRedis() {
-  if (!redis.isOpen) await redis.connect();
+  if (redis.isReady) return;
+  connection ??= redis.connect().finally(() => {
+    connection = undefined;
+  });
+  await connection;
 }
 
 export async function cacheGet<T>(key: string): Promise<T | null> {

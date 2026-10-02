@@ -8,13 +8,20 @@ import { AppError, asyncHandler, ok } from "../../utils/http.js";
 import type { AuthenticatedRequest } from "../../utils/types.js";
 import { parseInput } from "../../utils/validation.js";
 import { createParcel, transitionParcel } from "./service.js";
+import { changeParcel, lockParcel } from "./workflow.js";
 
 const createSchema = z.object({
   customerId: z.uuid(),
   pickupAddress: z.string().min(5),
   deliveryAddress: z.string().min(5),
   weightGrams: z.number().int().positive(),
-  codAmount: z.number().nonnegative().default(0),
+  codAmount: z
+    .number()
+    .nonnegative()
+    .max(9999999999.99)
+    .multipleOf(0.01)
+    .default(0),
+  merchantId: z.uuid().optional(),
   description: z.string().optional(),
 });
 const statusSchema = z.object({
@@ -66,7 +73,7 @@ function parcelIdFromRequest(req: Request) {
   const parcelId = req.params.id;
   if (typeof parcelId !== "string")
     throw new AppError(400, "Parcel id is required");
-  return parcelId;
+  return z.uuid().parse(parcelId);
 }
 
 parcelRouter.get(
@@ -110,7 +117,14 @@ parcelRouter.get(
         : user.role === "MERCHANT" && user.merchantId
           ? { merchantId: user.merchantId }
           : user.role === "RIDER"
-            ? { assignments: { some: { rider: { userId: user.id } } } }
+            ? {
+                assignments: {
+                  some: {
+                    completedAt: null,
+                    rider: { userId: user.id, status: "ACTIVE" },
+                  },
+                },
+              }
             : user.role === "HUB_MANAGER"
               ? {
                   currentHub: {
@@ -142,18 +156,31 @@ parcelRouter.post(
   asyncHandler(async (req, res) => {
     const user = (req as AuthenticatedRequest).user;
     if (!user) throw new AppError(401, "Authentication required");
-    if (!user.merchantId) throw new AppError(400, "Merchant context required");
-    const input = parseInput(createSchema, req.body);
+    const { merchantId: requestedMerchantId, ...input } = parseInput(
+      createSchema,
+      req.body,
+    );
+    const merchantId =
+      user.role === "MERCHANT"
+        ? user.merchantId
+        : (requestedMerchantId ?? user.merchantId);
+    if (!merchantId) throw new AppError(400, "Merchant context required");
     const customer = await prisma.customer.findFirst({
-      where: { id: input.customerId, merchantId: user.merchantId },
+      where: { id: input.customerId, merchantId },
     });
     if (!customer) throw new AppError(404, "Customer not found");
     return ok(
       res,
       await createParcel({
         ...input,
-        merchantId: user.merchantId,
-        idempotencyKey: req.header("idempotency-key") ?? undefined,
+        merchantId,
+        idempotencyKey: z
+          .string()
+          .trim()
+          .min(1)
+          .max(200)
+          .optional()
+          .parse(req.header("idempotency-key")),
       }),
       201,
       "Parcel created successfully",
@@ -168,30 +195,42 @@ parcelRouter.post(
     const user = (req as AuthenticatedRequest).user;
     if (!user) throw new AppError(401, "Authentication required");
     const { hubId } = parseInput(originHubSchema, req.body);
+    if (user.role === "MERCHANT" && !user.merchantId)
+      throw new AppError(403, "Merchant context required");
     const parcelId = parcelIdFromRequest(req);
     const parcel = await prisma.parcel.findFirst({
       where: {
         id: parcelId,
-        ...(user.merchantId ? { merchantId: user.merchantId } : {}),
+        ...(user.role === "MERCHANT"
+          ? { merchantId: user.merchantId ?? "__no_access__" }
+          : {}),
       },
     });
     if (!parcel) throw new AppError(404, "Parcel not found");
+    if (
+      !["CREATED", "PICKED_UP"].includes(parcel.status) ||
+      parcel.currentHubId
+    )
+      throw new AppError(
+        409,
+        "Origin hub can only be assigned once, before hub processing",
+      );
     const hub = await prisma.hub.findFirst({
       where: {
         id: hubId,
         isActive: true,
-        ...(user.role === "MERCHANT"
-          ? {
-              OR: [{ merchantId: user.merchantId }, { merchantId: null }],
-            }
-          : {}),
+        OR: [{ merchantId: parcel.merchantId }, { merchantId: null }],
       },
     });
     if (!hub) throw new AppError(404, "Origin hub not found");
     const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.parcel.update({
-        where: { id: parcel.id },
-        data: { currentHubId: hub.id, status: "AT_HUB" },
+      const result = await changeParcel(tx, parcel, {
+        currentHubId: hub.id,
+        status: "AT_HUB",
+      });
+      await tx.deliveryAssignment.updateMany({
+        where: { parcelId: parcel.id, completedAt: null },
+        data: { status: "COMPLETED", completedAt: new Date() },
       });
       await tx.trackingEvent.create({
         data: {
@@ -256,8 +295,11 @@ parcelRouter.post(
       )
     )
       throw new AppError(403, "Parcel is outside your hub scope");
-    if (parcel.status !== "AT_HUB")
-      throw new AppError(409, "Only parcels at a hub can be dispatched");
+    if (!["AT_HUB", "SORTING"].includes(parcel.status))
+      throw new AppError(
+        409,
+        "Only parcels at a hub or being sorted can be dispatched",
+      );
     const destination = await prisma.hub.findFirst({
       where: {
         id: input.destinationHubId,
@@ -266,6 +308,8 @@ parcelRouter.post(
       },
     });
     if (!destination) throw new AppError(404, "Destination hub not found");
+    if (destination.id === parcel.currentHubId)
+      throw new AppError(409, "Destination must differ from the current hub");
     if (
       input.vehicleId &&
       !(await prisma.vehicle.findFirst({
@@ -274,10 +318,7 @@ parcelRouter.post(
     )
       throw new AppError(404, "Vehicle not found");
     const result = await prisma.$transaction(async (tx) => {
-      const updated = await tx.parcel.update({
-        where: { id: parcel.id },
-        data: { status: "IN_TRANSIT" },
-      });
+      const updated = await changeParcel(tx, parcel, { status: "IN_TRANSIT" });
       await tx.hubTransfer.create({
         data: {
           parcelId: parcel.id,
@@ -334,9 +375,9 @@ parcelRouter.post(
         throw new AppError(403, "Destination hub is outside your scope");
     }
     const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.parcel.update({
-        where: { id: parcel.id },
-        data: { currentHubId: transfer.toHubId, status: "AT_HUB" },
+      const result = await changeParcel(tx, parcel, {
+        currentHubId: transfer.toHubId,
+        status: "AT_HUB",
       });
       await tx.trackingEvent.create({
         data: {
@@ -364,10 +405,14 @@ parcelRouter.post(
     const parcel = await prisma.parcel.findUnique({ where: { id: parcelId } });
     if (!parcel?.currentHubId)
       throw new AppError(404, "Parcel or current hub not found");
-    if (parcel.status !== "AT_HUB")
+    if (
+      !["AT_HUB", "SORTING", "DELIVERY_FAILED", "RESCHEDULED"].includes(
+        parcel.status,
+      )
+    )
       throw new AppError(
         409,
-        "Only parcels at a hub can be assigned to a rider",
+        "Parcel must be at a hub, sorted, failed or rescheduled before rider assignment",
       );
     if (user.role === "HUB_MANAGER") {
       const access = await prisma.userBranch.findFirst({
@@ -383,21 +428,24 @@ parcelRouter.post(
         id: input.riderId,
         hubId: parcel.currentHubId,
         isAvailable: true,
+        status: "ACTIVE",
       },
     });
     if (!rider)
       throw new AppError(404, "Available rider not found at this hub");
     const result = await prisma.$transaction(async (tx) => {
+      await lockParcel(tx, parcel.id);
+      await changeParcel(tx, parcel, { status: "OUT_FOR_DELIVERY" });
+      await tx.deliveryAssignment.updateMany({
+        where: { parcelId: parcel.id, completedAt: null },
+        data: { status: "REASSIGNED", completedAt: new Date() },
+      });
       const assignment = await tx.deliveryAssignment.create({
         data: {
           parcelId: parcel.id,
           riderId: rider.id,
           status: "ASSIGNED",
         },
-      });
-      await tx.parcel.update({
-        where: { id: parcel.id },
-        data: { status: "OUT_FOR_DELIVERY" },
       });
       await tx.trackingEvent.create({
         data: {
@@ -420,9 +468,7 @@ parcelRouter.patch(
     const input = statusSchema.parse(req.body);
     const user = (req as AuthenticatedRequest).user;
     if (!user) throw new AppError(401, "Authentication required");
-    const parcelId = req.params.id;
-    if (typeof parcelId !== "string")
-      throw new AppError(400, "Parcel id is required");
+    const parcelId = parcelIdFromRequest(req);
     if (user.role === "MERCHANT" && !user.merchantId)
       throw new AppError(403, "Merchant context required");
     return ok(

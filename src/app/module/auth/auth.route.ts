@@ -4,30 +4,27 @@ import type { Request, Response } from "express";
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { env } from "../../config/env.js";
 import type { Role } from "../../../generated/prisma/client.js";
+import { env } from "../../config/env.js";
 import {
   passwordResetEmail,
   sendEmail,
   verificationEmail,
 } from "../../lib/mail.js";
 import { prisma } from "../../lib/prisma.js";
-import {
-  cacheGet,
-  cacheSet,
-  connectRedis,
-  redis,
-} from "../../lib/redis.js";
+import { cacheGet, cacheSet, connectRedis, redis } from "../../lib/redis.js";
 import {
   authenticate,
   authorize,
   hashPassword,
-  revokeRefreshTokens,
+  refreshTokenExpiry,
+  refreshTokenHash,
   setRefreshCookie,
   signAccessToken,
   signRefreshToken,
   verifyPassword,
 } from "../../middleware/auth.js";
+import { authRateLimit } from "../../middleware/rate-limit.js";
 import { AppError, asyncHandler, ok } from "../../utils/http.js";
 import type { AuthenticatedRequest } from "../../utils/types.js";
 import { parseInput } from "../../utils/validation.js";
@@ -126,6 +123,7 @@ const profileView = (user: {
 
 export const authRouter = Router();
 authRouter.use(cookieParser());
+authRouter.use(authRateLimit);
 
 authRouter.get(
   "/me",
@@ -286,8 +284,8 @@ authRouter.post(
     await prisma.refreshToken.create({
       data: {
         userId: user.id,
-        tokenHash: await hashPassword(refreshToken),
-        expiresAt: new Date(Date.now() + 7 * 86400000),
+        tokenHash: refreshTokenHash(refreshToken),
+        expiresAt: refreshTokenExpiry(refreshToken),
       },
     });
     setRefreshCookie(res, refreshToken);
@@ -368,8 +366,8 @@ authRouter.post(
     await prisma.refreshToken.create({
       data: {
         userId: user.id,
-        tokenHash: await hashPassword(refreshToken),
-        expiresAt: new Date(Date.now() + 7 * 86400000),
+        tokenHash: refreshTokenHash(refreshToken),
+        expiresAt: refreshTokenExpiry(refreshToken),
       },
     });
     setRefreshCookie(res, refreshToken);
@@ -450,6 +448,7 @@ authRouter.get("/verify-email", asyncHandler(verifyEmailAction));
 authRouter.post(
   "/resend-verification",
   asyncHandler(async (req, res) => {
+    await connectRedis();
     const input = forgotSchema.parse(req.body);
     const pending = await cacheGet<PendingRegistration>(
       pendingKey(input.email),
@@ -558,38 +557,35 @@ authRouter.post(
     if (!token) throw new AppError(401, "Refresh token required");
     let payload: { sub?: string };
     try {
-      payload = jwt.verify(token, env.JWT_REFRESH_SECRET) as { sub?: string };
+      payload = jwt.verify(token, env.JWT_REFRESH_SECRET, {
+        algorithms: ["HS256"],
+      }) as { sub?: string };
     } catch {
       throw new AppError(401, "Invalid refresh token");
     }
     if (!payload.sub) throw new AppError(401, "Invalid refresh token");
-    const tokens = await prisma.refreshToken.findMany({
-      where: {
-        userId: payload.sub,
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-    });
-    const valid = await Promise.all(
-      tokens.map(async (item) =>
-        (await verifyPassword(token, item.tokenHash)) ? item : null,
-      ),
-    );
-    const found = valid.find(Boolean);
-    if (!found) throw new AppError(401, "Refresh token revoked or expired");
-    await prisma.refreshToken.update({
-      where: { id: (found as { id: string }).id },
-      data: { revokedAt: new Date() },
-    });
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) throw new AppError(401, "User not found");
     const refreshToken = signRefreshToken(user.id);
-    await prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: await hashPassword(refreshToken),
-        expiresAt: new Date(Date.now() + 7 * 86400000),
-      },
+    await prisma.$transaction(async (tx) => {
+      const consumed = await tx.refreshToken.updateMany({
+        where: {
+          userId: user.id,
+          tokenHash: refreshTokenHash(token),
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        data: { revokedAt: new Date() },
+      });
+      if (consumed.count !== 1)
+        throw new AppError(401, "Refresh token revoked or expired");
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: refreshTokenHash(refreshToken),
+          expiresAt: refreshTokenExpiry(refreshToken),
+        },
+      });
     });
     setRefreshCookie(res, refreshToken);
     return ok(res, {
@@ -608,10 +604,22 @@ authRouter.post(
   asyncHandler(async (req, res) => {
     const token = req.cookies?.refreshToken as string | undefined;
     if (token) {
+      let userId: string | undefined;
       try {
-        const p = jwt.verify(token, env.JWT_REFRESH_SECRET) as { sub?: string };
-        if (p?.sub) await revokeRefreshTokens(p.sub);
+        const p = jwt.verify(token, env.JWT_REFRESH_SECRET, {
+          algorithms: ["HS256"],
+        }) as { sub?: string };
+        userId = p?.sub;
       } catch {}
+      if (userId)
+        await prisma.refreshToken.updateMany({
+          where: {
+            userId,
+            tokenHash: refreshTokenHash(token),
+            revokedAt: null,
+          },
+          data: { revokedAt: new Date() },
+        });
     }
     res.clearCookie("refreshToken", { path: "/api/v1/auth" });
     return ok(res, { loggedOut: true });

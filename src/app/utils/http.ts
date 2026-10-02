@@ -59,47 +59,57 @@ export function errorHandler(
     typeof prismaMeta?.field_name === "string"
       ? prismaMeta.field_name
       : "related record";
+  const bodyError =
+    error && typeof error === "object" && "type" in error
+      ? error.type
+      : undefined;
   const appError =
-    error instanceof ZodError
-      ? new AppError(
-          400,
-          "Validation failed",
-          error.issues.map((issue) => ({
-            path: issue.path,
-            message: issue.message,
-          })),
-        )
-      : error instanceof AppError
-        ? error
-        : prismaCode === "P1001" ||
-            prismaCode === "P1002" ||
-            prismaCode === "P1017"
-          ? new AppError(503, "Database unavailable")
-          : prismaCode === "P2007" ||
-              prismaCode === "P2021" ||
-              prismaCode === "P2022"
-            ? new AppError(503, "Database schema is out of date")
-            : prismaCode === "P2003"
-              ? new AppError(409, "Related record does not exist", [
-                  {
-                    field: relationTarget,
-                    message: "Related record does not exist",
-                  },
-                ])
-              : prismaCode === "P2025"
-                ? new AppError(404, "Requested record was not found")
-                : prismaCode === "P2002"
-                  ? new AppError(
-                      409,
-                      "A record with the same unique value already exists",
-                      [
+    bodyError === "entity.parse.failed"
+      ? new AppError(400, "Invalid JSON body")
+      : bodyError === "entity.too.large"
+        ? new AppError(413, "Request body is too large")
+        : prismaCode === "P2034"
+          ? new AppError(409, "Concurrent update; retry the request")
+          : error instanceof ZodError
+            ? new AppError(
+                400,
+                "Validation failed",
+                error.issues.map((issue) => ({
+                  path: issue.path,
+                  message: issue.message,
+                })),
+              )
+            : error instanceof AppError
+              ? error
+              : prismaCode === "P1001" ||
+                  prismaCode === "P1002" ||
+                  prismaCode === "P1017"
+                ? new AppError(503, "Database unavailable")
+                : prismaCode === "P2007" ||
+                    prismaCode === "P2021" ||
+                    prismaCode === "P2022"
+                  ? new AppError(503, "Database schema is out of date")
+                  : prismaCode === "P2003"
+                    ? new AppError(409, "Related record does not exist", [
                         {
-                          field: uniqueTarget,
-                          message: `The value for ${uniqueTarget} is already in use`,
+                          field: relationTarget,
+                          message: "Related record does not exist",
                         },
-                      ],
-                    )
-                  : new AppError(500, "Internal server error");
+                      ])
+                    : prismaCode === "P2025"
+                      ? new AppError(404, "Requested record was not found")
+                      : prismaCode === "P2002"
+                        ? new AppError(
+                            409,
+                            "A record with the same unique value already exists",
+                            [
+                              {
+                                field: uniqueTarget,
+                                message: `The value for ${uniqueTarget} is already in use`,
+                              },
+                            ],
+                          )
+                        : new AppError(500, "Internal server error");
   const requestId = (req as Request & { id?: string }).id;
   if (appError.statusCode >= 500) console.error({ error, requestId });
   const errors = Array.isArray(appError.details)
@@ -112,11 +122,9 @@ export function errorHandler(
       ? { ...item, requestId }
       : { message: item, requestId },
   );
-  res
-    .status(appError.statusCode)
-    .json({
-      success: false,
-      message: appError.message,
-      errors: errorsWithRequestId,
-    });
+  res.status(appError.statusCode).json({
+    success: false,
+    message: appError.message,
+    errors: errorsWithRequestId,
+  });
 }

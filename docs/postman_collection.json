@@ -433,6 +433,26 @@
             ],
             "url": "{{baseUrl}}/operations/vehicles"
           }
+        },
+        {
+          "name": "List branches (admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations/branches"
+          }
+        },
+        {
+          "name": "List available riders at destination hub",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations/riders?hubId={{destinationHubId}}"
+          }
         }
       ]
     },
