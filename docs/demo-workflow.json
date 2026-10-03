@@ -1,6 +1,6 @@
 {
   "baseUrl": "http://localhost:4000/api/v1",
-  "notes": "Run the steps as a COD workflow. Each login replaces the Bearer access token. assign-rider already changes status to OUT_FOR_DELIVERY. For online payment, run one optional checkout after assignment and wait for the signed paid webhook BEFORE delivery; skip COD collection. Never start checkout after delivery.",
+  "notes": "Run the steps as a COD workflow. Each login replaces the Bearer access token. assign-rider already changes status to OUT_FOR_DELIVERY. For online payment, run one optional checkout after assignment; the verified paid Stripe webhook automatically marks the parcel DELIVERED and completes its active assignment. Do not send a second delivery update. COD delivery is completed by the rider and records COD collection. Never start checkout after delivery.",
   "credentials": {
     "merchant": { "email": "merchant@example.com", "password": "Password123!" },
     "hubManager": {

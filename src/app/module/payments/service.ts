@@ -1,7 +1,8 @@
 import { env } from "../../config/env.js";
 import { prisma } from "../../lib/prisma.js";
+import { redis } from "../../lib/redis.js";
 import { AppError } from "../../utils/http.js";
-import { lockParcel } from "../parcels/workflow.js";
+import { changeParcel, lockParcel } from "../parcels/workflow.js";
 
 export type CheckoutSession = {
   id?: string;
@@ -156,6 +157,10 @@ export async function reconcileCheckout(
     );
   await prisma.$transaction(async (tx) => {
     await lockParcel(tx, payment.parcelId);
+    const parcel = await tx.parcel.findUnique({
+      where: { id: payment.parcelId },
+    });
+    if (!parcel) throw new AppError(404, "Parcel not found");
     const changed = await tx.payment.updateMany({
       where: { id: payment.id, status: "PENDING" },
       data: {
@@ -169,6 +174,34 @@ export async function reconcileCheckout(
         where: { parcelId: payment.parcelId, method: "COD", status: "PENDING" },
         data: { status: "FAILED" },
       });
+    if (success && parcel.status === "OUT_FOR_DELIVERY") {
+      const deliveredAt = new Date();
+      await changeParcel(tx, parcel, { status: "DELIVERED", deliveredAt });
+      await tx.deliveryAssignment.updateMany({
+        where: { parcelId: parcel.id, completedAt: null },
+        data: {
+          status: "DELIVERED",
+          completedAt: deliveredAt,
+          deliveredAt,
+          attemptCount: { increment: 1 },
+        },
+      });
+      await tx.trackingEvent.create({
+        data: {
+          parcelId: parcel.id,
+          status: "DELIVERED",
+          note: "Delivery completed after online payment confirmation",
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: "PARCEL_DELIVERED_AFTER_ONLINE_PAYMENT",
+          entity: "Parcel",
+          entityId: parcel.id,
+          metadata: { paymentId: payment.id, sessionId: session.id },
+        },
+      });
+    }
     await tx.auditLog.create({
       data: {
         action: success ? "ONLINE_PAYMENT_CONFIRMED" : "ONLINE_PAYMENT_FAILED",
@@ -178,4 +211,15 @@ export async function reconcileCheckout(
       },
     });
   });
+  if (success && redis.isReady) {
+    try {
+      const parcel = await prisma.parcel.findUnique({
+        where: { id: payment.parcelId },
+        select: { trackingNumber: true },
+      });
+      if (parcel) await redis.del(`tracking:${parcel.trackingNumber}`);
+    } catch {
+      // Tracking cache expiry is short; its cleanup must not fail the webhook.
+    }
+  }
 }
