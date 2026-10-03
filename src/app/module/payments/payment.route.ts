@@ -9,6 +9,7 @@ import type { AuthenticatedRequest } from "../../utils/types.js";
 import {
   type CheckoutSession,
   createStripeCheckout,
+  refreshCheckoutStatus,
   reconcileCheckout,
 } from "./service.js";
 
@@ -18,6 +19,17 @@ const customerCheckoutSchema = z.object({
   phone: z.string().trim().min(7),
 });
 export const paymentRouter = Router();
+
+paymentRouter.get(
+  "/stripe/checkout/:sessionId/status",
+  asyncHandler(async (req, res) => {
+    const sessionId = z
+      .string()
+      .regex(/^cs_[A-Za-z0-9_]{1,240}$/)
+      .parse(req.params.sessionId);
+    return ok(res, await refreshCheckoutStatus(sessionId));
+  }),
+);
 
 paymentRouter.post(
   "/stripe/customer-checkout",

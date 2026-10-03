@@ -58,7 +58,7 @@ export async function createStripeCheckout(
   // The durable payment ID survives request retries and ambiguous network failures.
   const body = new URLSearchParams({
     mode: "payment",
-    success_url: env.STRIPE_SUCCESS_URL,
+    success_url: checkoutSuccessUrl(),
     cancel_url: env.STRIPE_CANCEL_URL,
     "line_items[0][price_data][currency]": "bdt",
     "line_items[0][price_data][product_data][name]": `Parcel ${parcel.trackingNumber}`,
@@ -115,6 +115,63 @@ export async function createStripeCheckout(
   }
   if (!session.url) throw new AppError(409, "Payment is being processed");
   return { checkoutSessionId: session.id, checkoutUrl: session.url };
+}
+
+function checkoutSuccessUrl() {
+  const successUrl = new URL(env.STRIPE_SUCCESS_URL);
+  successUrl.searchParams.delete("session_id");
+  successUrl.hash = "";
+  const url = successUrl.toString();
+  // Stripe replaces this literal after checkout; URLSearchParams would encode
+  // the braces and prevent the substitution.
+  return `${url}${url.includes("?") ? "&" : "?"}session_id={CHECKOUT_SESSION_ID}`;
+}
+
+export async function refreshCheckoutStatus(sessionId: string) {
+  if (!env.STRIPE_SECRET_KEY)
+    throw new AppError(503, "Stripe payments are not configured");
+  const payment = await prisma.payment.findFirst({
+    where: { providerReference: sessionId, method: "ONLINE" },
+  });
+  if (!payment) throw new AppError(404, "Checkout session not found");
+
+  // The webhook is the primary confirmation path. Retrieve Stripe only while
+  // the local payment is pending so a delayed webhook cannot strand checkout.
+  if (payment.status === "PENDING") {
+    let response: Response;
+    try {
+      response = await fetch(
+        `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
+        {
+          headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` },
+          signal: AbortSignal.timeout(10000),
+        },
+      );
+    } catch {
+      throw new AppError(502, "Payment status is temporarily unavailable");
+    }
+    const session = (await response.json().catch(() => null)) as
+      | CheckoutSession
+      | null;
+    if (!response.ok || !session || session.id !== sessionId)
+      throw new AppError(502, "Payment status is temporarily unavailable");
+    if (session.status === "expired") {
+      await reconcileCheckout(session, "checkout.session.expired");
+    } else if (session.payment_status === "paid") {
+      await reconcileCheckout(session, "checkout.session.completed");
+    }
+  }
+
+  const current = await prisma.payment.findFirst({
+    where: { id: payment.id },
+    include: { parcel: { select: { trackingNumber: true, status: true } } },
+  });
+  if (!current) throw new AppError(404, "Checkout session not found");
+  return {
+    paymentStatus: current.status,
+    parcelStatus: current.parcel.status,
+    trackingNumber: current.parcel.trackingNumber,
+  };
 }
 
 export async function reconcileCheckout(

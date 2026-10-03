@@ -721,6 +721,46 @@ describe("payments", () => {
     expect(fetchMock.mock.calls[1]?.[1].headers["Idempotency-Key"]).toBe(
       "parcel-payment-payment-1",
     );
+    expect(
+      new URLSearchParams(fetchMock.mock.calls[0]?.[1].body as string).get(
+        "success_url",
+      ),
+    ).toContain("session_id={CHECKOUT_SESSION_ID}");
+  });
+  it("reconciles a paid Stripe return when the webhook is delayed", async () => {
+    parcel.status = "OUT_FOR_DELIVERY";
+    const pendingPayment = {
+      ...payment(),
+      method: "ONLINE",
+      status: "PENDING",
+      providerReference: "cs_fixture",
+    };
+    const paidPayment = { ...pendingPayment, status: "PAID" };
+    db.payment.findFirst
+      .mockResolvedValueOnce(pendingPayment)
+      .mockResolvedValueOnce(pendingPayment)
+      .mockResolvedValueOnce({
+        ...paidPayment,
+        parcel: { trackingNumber: parcel.trackingNumber, status: "DELIVERED" },
+      });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => session(),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await request(app).get(
+      "/api/v1/payments/stripe/checkout/cs_fixture/status",
+    );
+
+    expect(result.status).toBe(200);
+    expect(result.body.data).toEqual({
+      paymentStatus: "PAID",
+      parcelStatus: "DELIVERED",
+      trackingNumber: parcel.trackingNumber,
+    });
+    expect(parcel.status).toBe("DELIVERED");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
   it("blocks delivery while a positive online payment is pending", async () => {
     parcel.status = "OUT_FOR_DELIVERY";
