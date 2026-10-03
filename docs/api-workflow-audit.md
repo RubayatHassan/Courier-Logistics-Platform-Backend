@@ -17,16 +17,16 @@ All API paths below start with `/api/v1`. ADMIN operations also allow SUPER_ADMI
 | 1 | Public `POST /auth/register` | email, password, name; merchantName for merchant registration | Pending registration in Redis for 15 minutes; no User yet. SMTP verification code/link required. |
 | 2 | Public `POST /auth/verify-email` or verification GET link | email + code, or token | Transaction creates Merchant (if requested) and verified User. |
 | 3 | Public `POST /auth/login` | verified account credentials | Access token + HttpOnly refresh cookie. `/auth/refresh` consumes the old refresh token atomically; `/auth/logout` revokes that session. |
-| 4 | Admin `POST /operations/branches` | name, code, type | branchId for hubs and manager scope. `GET /operations/branches` retrieves active branches. |
-| 5 | Admin `POST /operations/hubs` | name, code, address, city, branchId; optional merchantId | originHubId and destinationHubId. A branch is needed for hub-manager access. Merchant hubs must match the parcel's merchant; shared hubs have merchantId=null. |
-| 6 | Admin `POST /operations/hub-managers` | branchId, identity and password | User(role=HUB_MANAGER) + UserBranch created atomically. Repeat for a different destination branch when needed. |
+| 4 | Admin `POST /operations/branches` | name, code, type | branchId organizes hubs; branch membership does not grant hub access. `GET /operations/branches` retrieves active branches. |
+| 5 | Admin `POST /operations/hubs` | name, code, address, city, optional branchId/merchantId | originHubId and destinationHubId. Merchant hubs must match the parcel's merchant; shared hubs have merchantId=null. |
+| 6 | Admin `POST /operations/hub-managers` | hubId, identity and password; optional matching branchId | User(role=HUB_MANAGER, managedHubId=hubId). Branch metadata may be recorded but authorization uses only the exact hub. A separate manager handles another destination hub even within the same branch. |
 | 7 | Admin `POST /operations/riders` | destinationHubId as hubId, identity and password | User(role=RIDER) + Rider. Manager/admin `GET /operations/riders?hubId=...` returns available active rider IDs in scope. |
 | 8 | Admin `POST /operations/vehicles` | type, plateNumber, optional capacityKg | Optional vehicleId for transfer; hub managers can list active vehicles. |
 | 9 | Merchant/admin `POST /customers` | name, phone, optional email; admin supplies merchantId | customerId belongs to one merchant. `GET /customers` uses the same merchant scope. |
 | 10 | Merchant/admin `POST /parcels` | customerId, pickup/delivery addresses, weightGrams, codAmount; admin supplies merchantId | Parcel(CREATED), tracking event and positive COD payment created in one transaction. Reuse the same Idempotency-Key only with the same payload. Save parcelId/trackingNumber. |
-| 11 | Merchant/admin `POST /parcels/:id/assign-origin-hub` | parcelId + originHubId | CREATED (or legacy PICKED_UP) → AT_HUB, currentHubId set, event recorded; branch managers receive notifications. This is the currently supported direct hub drop-off flow. |
+| 11 | Merchant/admin `POST /parcels/:id/assign-origin-hub` | parcelId + originHubId | CREATED (or legacy PICKED_UP) → AT_HUB, currentHubId set, event recorded; only that hub's managers receive notifications. This is the currently supported direct hub drop-off flow. |
 | 12 | Origin manager/admin `POST /parcels/:id/dispatch` | destinationHubId; optional vehicleId | AT_HUB → IN_TRANSIT; creates HubTransfer(fromHubId,toHubId). Current hub remains origin until arrival. Destination must differ. |
-| 13 | Destination manager/admin `POST /parcels/:id/mark-arrived` | parcelId with latest transfer | IN_TRANSIT → AT_HUB; currentHubId becomes destination. Destination UserBranch scope is checked. |
+| 13 | Destination manager/admin `POST /parcels/:id/mark-arrived` | parcelId with latest transfer | IN_TRANSIT → AT_HUB; currentHubId becomes destination. Manager must be assigned to the exact destination hub. |
 | 14 | Destination manager/admin `POST /parcels/:id/assign-rider` | riderId from that hub | AT_HUB/SORTING/DELIVERY_FAILED/RESCHEDULED → OUT_FOR_DELIVERY. Old active assignments close; one new assignment is created. No extra OUT_FOR_DELIVERY status PATCH is needed. |
 | 15a | Optional customer `POST /payments/stripe/customer-checkout` | trackingNumber + recipient phone, parcel OUT_FOR_DELIVERY | Returns checkout URL; pending online payment prevents delivery and terminal closure. Merchant/admin can use `/payments/stripe/checkout` with parcelId before closure. |
 | 15b | Stripe `POST /payments/stripe/webhook` | signed raw body | Completed/async-success with paid status → PAID after amount, currency and parcel checks; pending COD is disabled. Expired/async-failed → FAILED so another checkout can be started. Duplicate events do not repeat side effects. |
@@ -46,6 +46,7 @@ Same-hub delivery can skip dispatch/arrival and assign a rider directly at step 
 - A retry of an open checkout returns the existing provider URL. A network failure keeps the same durable payment ID and provider idempotency key. An unbound session older than 23 hours requires operator reconciliation before retry, avoiding reuse after Stripe's minimum retention window.
 - Online-paid returns/cancellations are not refunded automatically; refund operations remain unimplemented. Financial operators must not interpret parcel status as proof of a completed refund.
 - `GET/PATCH /auth/me` read/update the authenticated profile. Admin creation is SUPER_ADMIN-only. Google login verifies the Google token and links/creates a customer account. Password reset atomically consumes the reset record, changes the password and revokes refresh tokens.
+- Self-service: a customer registers as CUSTOMER (no `merchantName`), verifies email and logs in. A merchant must store that same email on the recipient's Customer record. `GET /customers/me/parcels` returns only parcels whose recipient email matches that verified account; pagination, status history and payment summaries are scoped to that email. `POST /customers/me/parcels/:id/cancel` requires a reason and locks/rechecks ownership and status in a transaction. Only CREATED/PICKUP_ASSIGNED parcels can be cancelled; COD is voided, active assignments close, and event/audit records are added. After pickup, customer tracking and the existing Stripe checkout are available.
 
 ## Defects fixed
 
@@ -74,7 +75,7 @@ Same-hub delivery can skip dispatch/arrival and assign a rider directly at step 
 
 | Priority | Gap | Required outcome |
 | --- | --- | --- |
-| P1 | No baseline Prisma migration history; only one manual SQL change exists | Baseline the deployed schema with a reviewed migration plan, then verify deploy/rollback on a database copy. `prisma validate` does not prove a deployed DB matches. |
+| P1 | No baseline Prisma migration history; manual SQL changes exist | Baseline the deployed schema with a reviewed migration plan, then verify deploy/rollback on a database copy. `prisma validate` does not prove a deployed DB matches. |
 | P1 | Parcel and Order/Shipment are parallel models without synchronized workflows | Choose the canonical shipment aggregate, implement booking/order/assignment/payment synchronization, and migrate existing records. Do not assume an ERD relation creates an API process. |
 | P1 | Settlement/invoice/refund/claim APIs absent | Define delivery-fee deductions, COD custody, payout reconciliation, settlement periods, partial/full refunds, disputes and idempotent financial posting. DeliveryCharge is calculated but not posted as a ledger deduction. |
 | P1 | Existing production data may contain duplicate/stale payments, assignments or transfers | Run a read-only reconciliation report and approve data repair before rollout. No existing data was changed in this audit. |
@@ -82,7 +83,7 @@ Same-hub delivery can skip dispatch/arrival and assign a rider directly at step 
 | P1 | Super-admin bootstrap only runs in `src/server.ts`; Vercel imports `api/index.ts` | Provision the first super admin through a controlled deployment step; review existing-account promotion and initial credentials. Do not rely on server startup code in serverless. |
 | P1 | Notifications have records but no reliable worker/outbox flow | Implement queued sending, retry/dead-letter behavior and operator visibility; verification/reset email delivery failure also needs retry guarantees. |
 | P2 | Pickup workflow/proof of delivery missing | Add pickup assignment and receipt, evidence/OTP/signature for delivery, return receipt and exception ownership. Origin assignment currently represents a direct hub drop-off. |
-| P2 | Authentication/account model hardening incomplete | Access JWTs remain valid until expiry after reset/logout; decide tokenVersion/session invalidation policy. Add verification/register/reset end-to-end tests, password byte-length policy, account lifecycle and admin audit coverage. |
+| P2 | Authentication/account model hardening incomplete | Access JWTs remain valid until expiry after reset/logout; decide tokenVersion/session invalidation policy. Add verification/register/reset and customer portal end-to-end tests, password byte-length policy, account lifecycle and admin audit coverage. |
 | P2 | Proxy/rate-limit deployment configuration | Configure trusted proxy topology and verify distinct client IPs. Current forwarded headers are not trusted; behind an unconfigured proxy, callers may share an IP bucket. Public tracking/customer checkout need deployment-level abuse controls. |
 | P2 | Lookup/list/inbound queue completeness | Add cursor pagination to customers/vehicles and paged navigation to capped lookup endpoints; add scoped incoming-transfer queues and a notification API. Destination managers currently need parcel IDs from an external handoff. |
 | P2 | Incomplete schema relationships | Review loose roleId/addressId/documentId/tagId fields, duplicated ServiceType/ServiceTypeRecord, merchant/account ownership and required-vs-nullable relationships. Add DB uniqueness for one active assignment/payment where appropriate after existing-data reconciliation. |
@@ -90,13 +91,13 @@ Same-hub delivery can skip dispatch/arrival and assign a rider directly at step 
 
 ## Verification and rollout
 
-Local result: 44 tests passed across 4 files; TypeScript build passed; Prisma schema validation passed; repository lint passed with only the pre-existing Biome configuration deprecation notice. Changed source files passed Biome checks, and `git diff --check` passed.
+The initial audit passed 44 tests. The exact-hub authorization follow-up adds cases for separate managers in the same branch, scoped list/count, foreign parcels/riders, inactive/unavailable riders, notifications and admin-only hub mapping. Tests use mocked persistence; real PostgreSQL verification remains required.
 
 Run `npm test`, `npm run build`, `npm run lint:check`, and `npx prisma validate`. The regression suite runs Express routes through Supertest with fake Prisma/Redis/Stripe; it uses test credentials and does not contact configured production services. Tests cover the complete direct-hub COD sequence plus negative authorization, stale-write guards, retry, signature, amount and token cases. Pricing tests now call production pricing code rather than copying the formula.
 
 Before deployment:
 
-1. Confirm PostgreSQL schema and required manual vehicle-transfer migration; this code update itself adds no schema fields.
+1. Confirm PostgreSQL schema and the vehicle-transfer migration. Apply `prisma/manual-migrations/20261003000000_scope_managers_to_hubs.sql` before deploying the hub-scope update; it adds User.managedHubId and its FK/index. Admin must explicitly map existing managers using `PATCH /operations/hub-managers/:id/hub`. Unmapped managers fail closed. There is no automatic branch-to-hub backfill.
 2. Set up reachable Redis and production SMTP. Authentication now fails closed when its Redis protection is unavailable.
 3. Expect one-time re-login for refresh sessions stored with the previous bcrypt hash format.
 4. Subscribe Stripe to completed, async_payment_succeeded, async_payment_failed and expired checkout events; verify signatures with the actual endpoint secret in a test account.

@@ -7,6 +7,10 @@
       "email": "hubmanager@example.com",
       "password": "Password123!"
     },
+    "destinationHubManager": {
+      "email": "destinationmanager@example.com",
+      "password": "Password123!"
+    },
     "rider": { "email": "rider@example.com", "password": "Password123!" }
   },
   "seedData": {
@@ -56,7 +60,17 @@
       }
     },
     {
+      "name": "Login destination hub manager",
+      "method": "POST",
+      "path": "/auth/login",
+      "body": {
+        "email": "destinationmanager@example.com",
+        "password": "Password123!"
+      }
+    },
+    {
       "name": "Mark arrived",
+      "requires": "Login as destinationHubManager first; the origin manager cannot receive another hub's parcel.",
       "method": "POST",
       "path": "/parcels/{{parcelId}}/mark-arrived",
       "body": {}

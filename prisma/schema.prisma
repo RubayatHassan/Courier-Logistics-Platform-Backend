@@ -72,11 +72,14 @@ model User {
   sessions UserSession[]
   userRoles UserRole[]
   userBranches UserBranch[]
+  managedHubId String?
+  managedHub Hub? @relation("HubManagers", fields: [managedHubId], references: [id], onDelete: SetNull)
   notifications Notification[]
   orders Order[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([merchantId, role])
+  @@index([managedHubId, role])
 }
 
 model RefreshToken {
@@ -159,6 +162,7 @@ model Hub {
   isActive Boolean @default(true)
   parcels Parcel[] @relation("CurrentHub")
   riders Rider[]
+  managers User[] @relation("HubManagers")
   branchId String?
   branch WarehouseBranch? @relation(fields: [branchId], references: [id])
   fromTransfers HubTransfer[] @relation("FromHub")

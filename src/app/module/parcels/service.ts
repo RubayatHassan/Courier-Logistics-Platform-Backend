@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { ParcelStatus } from "../../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../utils/http.js";
+import { managedHubScope } from "../operations/scope.js";
 import {
   calculateDeliveryCharge,
   changeParcel,
@@ -162,9 +163,7 @@ export async function transitionParcel(
           }
         : role === "HUB_MANAGER"
           ? {
-              currentHub: {
-                branch: { userBranches: { some: { userId: actorId } } },
-              },
+              currentHub: managedHubScope(actorId),
             }
           : {};
   const parcel = await prisma.parcel.findFirst({

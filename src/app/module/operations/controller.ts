@@ -36,7 +36,8 @@ const manager = z.object({
   email: z.email().transform((v) => v.toLowerCase()),
   password: z.string().min(8),
   name: z.string().min(2),
-  branchId: z.uuid(),
+  hubId: z.uuid(),
+  branchId: z.uuid().optional(),
 });
 const rider = z.object({
   email: z.email().transform((v) => v.toLowerCase()),

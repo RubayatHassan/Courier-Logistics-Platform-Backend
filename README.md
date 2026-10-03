@@ -18,6 +18,8 @@ The Prisma schema also contains the full relational ERD layer: users/roles/sessi
 
 The API is available at `http://localhost:4000`. An importable Postman collection is available at `docs/postman_collection.json`.
 
+Set `superAdminPassword` in your private Postman environment before using the super administrator login request. Keep real credentials out of the exported collection.
+
 ## Deploy to Vercel
 
 This project exposes the Express app through `api/index.ts` for Vercel. Import the repository into Vercel, keep the default build settings, and add the environment variables from `.env.example` in the Vercel project settings. Set `NODE_ENV=production`, set `APP_URL` to the deployed URL, and set `CLIENT_ORIGIN` to the frontend origin. Use the hosted PostgreSQL and Redis URLs in `DATABASE_URL` and `REDIS_URL`; do not upload `.env`.
@@ -68,7 +70,11 @@ Stripe checkout requires `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`. Checko
 
 Redis is required for authentication rate limits; protected authentication actions return 503 if Redis is unavailable. Production email requires SMTP and never prints verification/reset secrets as development previews. Configure trusted proxy handling for the actual deployment before relying on per-client IP limits; forwarded headers are not blindly trusted.
 
-After the refresh-token security update, existing sessions using the old bcrypt token hash must log in again. New refresh tokens use SHA-256 fingerprints, random token IDs, atomic single-use rotation and cookie/database expiry derived from the configured token TTL. No schema migration is required for these code changes.
+After the refresh-token security update, existing sessions using the old bcrypt token hash must log in again. New refresh tokens use SHA-256 fingerprints, random token IDs, atomic single-use rotation and cookie/database expiry derived from the configured token TTL.
+
+Hub managers are now assigned to one explicit hub through `User.managedHubId`. Branch membership does not grant parcel or rider access. Before deploying this update, apply `prisma/manual-migrations/20261003000000_scope_managers_to_hubs.sql`, then explicitly assign existing managers using admin `PATCH /api/v1/operations/hub-managers/:id/hub` with `{ "hubId": "..." }`. Managers without a hub see no parcels/riders and cannot perform hub operations. New manager creation requires `hubId`; optional `branchId` must match that hub. Local riders must belong to the parcel's current hub and be active/available. Geographic zones are not modeled separately.
+
+Managers use `GET /operations/hubs` for their own hub, and `GET /operations/transfer-destinations` for the limited destination directory (id/name/code/city only). The latter grants no access to destination parcels or riders. Demo seed creates `hubmanager@example.com` for the origin hub and `destinationmanager@example.com` for the destination hub; switch logins before receiving the transfer.
 
 ## API conventions
 
@@ -83,3 +89,7 @@ Example error response:
   "errors": [{ "path": ["weightGrams"], "message": "Too small: expected number to be >0" }]
 }
 ```
+
+## Customer self-service
+
+Customers can register through `/auth/register` without `merchantName`, verify their email and log in. Merchants add that same email to the recipient record when creating a customer. The customer then uses `GET /api/v1/customers/me/parcels` to see only parcels addressed to their verified account email. `POST /api/v1/customers/me/parcels/:id/cancel` accepts a short reason and cancels only that customer's parcel while its status is `CREATED` or `PICKUP_ASSIGNED`. After pickup, use public tracking or the existing recipient Stripe checkout flow; cancellation is not available. The seed account is `customer@example.com` with the local demo password `Password123!`.

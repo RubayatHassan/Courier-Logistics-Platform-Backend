@@ -84,7 +84,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"superadmin@example.com\",\"password\":\"SuperAdmin123!\"}"
+              "raw": "{\"email\":\"superadmin@example.com\",\"password\":\"{{superAdminPassword}}\"}"
             },
             "url": "{{baseUrl}}/auth/login"
           },
@@ -394,7 +394,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"hubmanager@example.com\",\"password\":\"Password123!\",\"name\":\"Dhaka Hub Manager\",\"branchId\":\"{{branchId}}\"}"
+              "raw": "{\"email\":\"hubmanager@example.com\",\"password\":\"Password123!\",\"name\":\"Dhaka Hub Manager\",\"hubId\":\"{{originHubId}}\"}"
             },
             "url": "{{baseUrl}}/operations/hub-managers"
           }
@@ -442,6 +442,28 @@
               { "key": "Authorization", "value": "Bearer {{accessToken}}" }
             ],
             "url": "{{baseUrl}}/operations/branches"
+          }
+        },
+        {
+          "name": "Assign existing manager to a hub (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\"hubId\":\"{{originHubId}}\"}" },
+            "url": "{{baseUrl}}/operations/hub-managers/{{hubManagerId}}/hub"
+          }
+        },
+        {
+          "name": "Transfer destination directory (no parcel access)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{accessToken}}" }
+            ],
+            "url": "{{baseUrl}}/operations/transfer-destinations"
           }
         },
         {

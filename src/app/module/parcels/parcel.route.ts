@@ -7,6 +7,7 @@ import { authenticate, authorize } from "../../middleware/auth.js";
 import { AppError, asyncHandler, ok } from "../../utils/http.js";
 import type { AuthenticatedRequest } from "../../utils/types.js";
 import { parseInput } from "../../utils/validation.js";
+import { managedHubScope, requireManagedHub } from "../operations/scope.js";
 import { createParcel, transitionParcel } from "./service.js";
 import { changeParcel, lockParcel } from "./workflow.js";
 
@@ -127,9 +128,7 @@ parcelRouter.get(
               }
             : user.role === "HUB_MANAGER"
               ? {
-                  currentHub: {
-                    branch: { userBranches: { some: { userId: user.id } } },
-                  },
+                  currentHub: managedHubScope(user.id),
                 }
               : { id: "__no_access__" };
     const where = { ...roleScope, ...(status ? { status } : {}) };
@@ -241,11 +240,11 @@ parcelRouter.post(
           note: "Origin hub assigned",
         },
       });
-      if (hub.branchId) {
+      {
         const managers = await tx.user.findMany({
           where: {
             role: "HUB_MANAGER",
-            userBranches: { some: { branchId: hub.branchId } },
+            managedHubId: hub.id,
           },
           select: { id: true },
         });
@@ -280,21 +279,12 @@ parcelRouter.post(
     const parcelId = parcelIdFromRequest(req);
     const parcel = await prisma.parcel.findUnique({
       where: { id: parcelId },
-      include: {
-        currentHub: {
-          include: { branch: { include: { userBranches: true } } },
-        },
-      },
+      include: { currentHub: true },
     });
     if (!parcel?.currentHub)
       throw new AppError(404, "Parcel or current hub not found");
-    if (
-      user.role === "HUB_MANAGER" &&
-      !parcel.currentHub.branch?.userBranches.some(
-        (item) => item.userId === user.id,
-      )
-    )
-      throw new AppError(403, "Parcel is outside your hub scope");
+    if (user.role === "HUB_MANAGER")
+      await requireManagedHub(user.id, parcel.currentHub.id);
     if (!["AT_HUB", "SORTING"].includes(parcel.status))
       throw new AppError(
         409,
@@ -365,14 +355,7 @@ parcelRouter.post(
     if (parcel.status !== "IN_TRANSIT")
       throw new AppError(409, "Parcel is not in transit");
     if (user.role === "HUB_MANAGER") {
-      const access = await prisma.userBranch.findFirst({
-        where: {
-          userId: user.id,
-          branch: { hubs: { some: { id: transfer.toHubId } } },
-        },
-      });
-      if (!access)
-        throw new AppError(403, "Destination hub is outside your scope");
+      await requireManagedHub(user.id, transfer.toHubId);
     }
     const updated = await prisma.$transaction(async (tx) => {
       const result = await changeParcel(tx, parcel, {
@@ -415,13 +398,7 @@ parcelRouter.post(
         "Parcel must be at a hub, sorted, failed or rescheduled before rider assignment",
       );
     if (user.role === "HUB_MANAGER") {
-      const access = await prisma.userBranch.findFirst({
-        where: {
-          userId: user.id,
-          branch: { hubs: { some: { id: parcel.currentHubId } } },
-        },
-      });
-      if (!access) throw new AppError(403, "Parcel is outside your hub scope");
+      await requireManagedHub(user.id, parcel.currentHubId);
     }
     const rider = await prisma.rider.findFirst({
       where: {

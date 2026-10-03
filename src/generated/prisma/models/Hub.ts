@@ -209,6 +209,7 @@ export type HubWhereInput = {
   merchant?: Prisma.XOR<Prisma.MerchantNullableScalarRelationFilter, Prisma.MerchantWhereInput> | null
   parcels?: Prisma.ParcelListRelationFilter
   riders?: Prisma.RiderListRelationFilter
+  managers?: Prisma.UserListRelationFilter
   branch?: Prisma.XOR<Prisma.WarehouseBranchNullableScalarRelationFilter, Prisma.WarehouseBranchWhereInput> | null
   fromTransfers?: Prisma.HubTransferListRelationFilter
   toTransfers?: Prisma.HubTransferListRelationFilter
@@ -226,6 +227,7 @@ export type HubOrderByWithRelationInput = {
   merchant?: Prisma.MerchantOrderByWithRelationInput
   parcels?: Prisma.ParcelOrderByRelationAggregateInput
   riders?: Prisma.RiderOrderByRelationAggregateInput
+  managers?: Prisma.UserOrderByRelationAggregateInput
   branch?: Prisma.WarehouseBranchOrderByWithRelationInput
   fromTransfers?: Prisma.HubTransferOrderByRelationAggregateInput
   toTransfers?: Prisma.HubTransferOrderByRelationAggregateInput
@@ -246,6 +248,7 @@ export type HubWhereUniqueInput = Prisma.AtLeast<{
   merchant?: Prisma.XOR<Prisma.MerchantNullableScalarRelationFilter, Prisma.MerchantWhereInput> | null
   parcels?: Prisma.ParcelListRelationFilter
   riders?: Prisma.RiderListRelationFilter
+  managers?: Prisma.UserListRelationFilter
   branch?: Prisma.XOR<Prisma.WarehouseBranchNullableScalarRelationFilter, Prisma.WarehouseBranchWhereInput> | null
   fromTransfers?: Prisma.HubTransferListRelationFilter
   toTransfers?: Prisma.HubTransferListRelationFilter
@@ -289,6 +292,7 @@ export type HubCreateInput = {
   merchant?: Prisma.MerchantCreateNestedOneWithoutHubsInput
   parcels?: Prisma.ParcelCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserCreateNestedManyWithoutManagedHubInput
   branch?: Prisma.WarehouseBranchCreateNestedOneWithoutHubsInput
   fromTransfers?: Prisma.HubTransferCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferCreateNestedManyWithoutToHubInput
@@ -305,6 +309,7 @@ export type HubUncheckedCreateInput = {
   branchId?: string | null
   parcels?: Prisma.ParcelUncheckedCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderUncheckedCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserUncheckedCreateNestedManyWithoutManagedHubInput
   fromTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutToHubInput
 }
@@ -319,6 +324,7 @@ export type HubUpdateInput = {
   merchant?: Prisma.MerchantUpdateOneWithoutHubsNestedInput
   parcels?: Prisma.ParcelUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUpdateManyWithoutManagedHubNestedInput
   branch?: Prisma.WarehouseBranchUpdateOneWithoutHubsNestedInput
   fromTransfers?: Prisma.HubTransferUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUpdateManyWithoutToHubNestedInput
@@ -335,6 +341,7 @@ export type HubUncheckedUpdateInput = {
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parcels?: Prisma.ParcelUncheckedUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUncheckedUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUncheckedUpdateManyWithoutManagedHubNestedInput
   fromTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutToHubNestedInput
 }
@@ -368,6 +375,11 @@ export type HubUncheckedUpdateManyInput = {
   city?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type HubNullableScalarRelationFilter = {
+  is?: Prisma.HubWhereInput | null
+  isNot?: Prisma.HubWhereInput | null
 }
 
 export type HubListRelationFilter = {
@@ -413,14 +425,25 @@ export type HubMinOrderByAggregateInput = {
   branchId?: Prisma.SortOrder
 }
 
-export type HubNullableScalarRelationFilter = {
-  is?: Prisma.HubWhereInput | null
-  isNot?: Prisma.HubWhereInput | null
-}
-
 export type HubScalarRelationFilter = {
   is?: Prisma.HubWhereInput
   isNot?: Prisma.HubWhereInput
+}
+
+export type HubCreateNestedOneWithoutManagersInput = {
+  create?: Prisma.XOR<Prisma.HubCreateWithoutManagersInput, Prisma.HubUncheckedCreateWithoutManagersInput>
+  connectOrCreate?: Prisma.HubCreateOrConnectWithoutManagersInput
+  connect?: Prisma.HubWhereUniqueInput
+}
+
+export type HubUpdateOneWithoutManagersNestedInput = {
+  create?: Prisma.XOR<Prisma.HubCreateWithoutManagersInput, Prisma.HubUncheckedCreateWithoutManagersInput>
+  connectOrCreate?: Prisma.HubCreateOrConnectWithoutManagersInput
+  upsert?: Prisma.HubUpsertWithoutManagersInput
+  disconnect?: Prisma.HubWhereInput | boolean
+  delete?: Prisma.HubWhereInput | boolean
+  connect?: Prisma.HubWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.HubUpdateToOneWithWhereWithoutManagersInput, Prisma.HubUpdateWithoutManagersInput>, Prisma.HubUncheckedUpdateWithoutManagersInput>
 }
 
 export type HubCreateNestedManyWithoutMerchantInput = {
@@ -573,6 +596,82 @@ export type HubUncheckedUpdateManyWithoutBranchNestedInput = {
   deleteMany?: Prisma.HubScalarWhereInput | Prisma.HubScalarWhereInput[]
 }
 
+export type HubCreateWithoutManagersInput = {
+  id?: string
+  name: string
+  code: string
+  address: string
+  city: string
+  isActive?: boolean
+  merchant?: Prisma.MerchantCreateNestedOneWithoutHubsInput
+  parcels?: Prisma.ParcelCreateNestedManyWithoutCurrentHubInput
+  riders?: Prisma.RiderCreateNestedManyWithoutHubInput
+  branch?: Prisma.WarehouseBranchCreateNestedOneWithoutHubsInput
+  fromTransfers?: Prisma.HubTransferCreateNestedManyWithoutFromHubInput
+  toTransfers?: Prisma.HubTransferCreateNestedManyWithoutToHubInput
+}
+
+export type HubUncheckedCreateWithoutManagersInput = {
+  id?: string
+  merchantId?: string | null
+  name: string
+  code: string
+  address: string
+  city: string
+  isActive?: boolean
+  branchId?: string | null
+  parcels?: Prisma.ParcelUncheckedCreateNestedManyWithoutCurrentHubInput
+  riders?: Prisma.RiderUncheckedCreateNestedManyWithoutHubInput
+  fromTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutFromHubInput
+  toTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutToHubInput
+}
+
+export type HubCreateOrConnectWithoutManagersInput = {
+  where: Prisma.HubWhereUniqueInput
+  create: Prisma.XOR<Prisma.HubCreateWithoutManagersInput, Prisma.HubUncheckedCreateWithoutManagersInput>
+}
+
+export type HubUpsertWithoutManagersInput = {
+  update: Prisma.XOR<Prisma.HubUpdateWithoutManagersInput, Prisma.HubUncheckedUpdateWithoutManagersInput>
+  create: Prisma.XOR<Prisma.HubCreateWithoutManagersInput, Prisma.HubUncheckedCreateWithoutManagersInput>
+  where?: Prisma.HubWhereInput
+}
+
+export type HubUpdateToOneWithWhereWithoutManagersInput = {
+  where?: Prisma.HubWhereInput
+  data: Prisma.XOR<Prisma.HubUpdateWithoutManagersInput, Prisma.HubUncheckedUpdateWithoutManagersInput>
+}
+
+export type HubUpdateWithoutManagersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.StringFieldUpdateOperationsInput | string
+  city?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  merchant?: Prisma.MerchantUpdateOneWithoutHubsNestedInput
+  parcels?: Prisma.ParcelUpdateManyWithoutCurrentHubNestedInput
+  riders?: Prisma.RiderUpdateManyWithoutHubNestedInput
+  branch?: Prisma.WarehouseBranchUpdateOneWithoutHubsNestedInput
+  fromTransfers?: Prisma.HubTransferUpdateManyWithoutFromHubNestedInput
+  toTransfers?: Prisma.HubTransferUpdateManyWithoutToHubNestedInput
+}
+
+export type HubUncheckedUpdateWithoutManagersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  merchantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  address?: Prisma.StringFieldUpdateOperationsInput | string
+  city?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parcels?: Prisma.ParcelUncheckedUpdateManyWithoutCurrentHubNestedInput
+  riders?: Prisma.RiderUncheckedUpdateManyWithoutHubNestedInput
+  fromTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutFromHubNestedInput
+  toTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutToHubNestedInput
+}
+
 export type HubCreateWithoutMerchantInput = {
   id?: string
   name: string
@@ -582,6 +681,7 @@ export type HubCreateWithoutMerchantInput = {
   isActive?: boolean
   parcels?: Prisma.ParcelCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserCreateNestedManyWithoutManagedHubInput
   branch?: Prisma.WarehouseBranchCreateNestedOneWithoutHubsInput
   fromTransfers?: Prisma.HubTransferCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferCreateNestedManyWithoutToHubInput
@@ -597,6 +697,7 @@ export type HubUncheckedCreateWithoutMerchantInput = {
   branchId?: string | null
   parcels?: Prisma.ParcelUncheckedCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderUncheckedCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserUncheckedCreateNestedManyWithoutManagedHubInput
   fromTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutToHubInput
 }
@@ -650,6 +751,7 @@ export type HubCreateWithoutRidersInput = {
   isActive?: boolean
   merchant?: Prisma.MerchantCreateNestedOneWithoutHubsInput
   parcels?: Prisma.ParcelCreateNestedManyWithoutCurrentHubInput
+  managers?: Prisma.UserCreateNestedManyWithoutManagedHubInput
   branch?: Prisma.WarehouseBranchCreateNestedOneWithoutHubsInput
   fromTransfers?: Prisma.HubTransferCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferCreateNestedManyWithoutToHubInput
@@ -665,6 +767,7 @@ export type HubUncheckedCreateWithoutRidersInput = {
   isActive?: boolean
   branchId?: string | null
   parcels?: Prisma.ParcelUncheckedCreateNestedManyWithoutCurrentHubInput
+  managers?: Prisma.UserUncheckedCreateNestedManyWithoutManagedHubInput
   fromTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutToHubInput
 }
@@ -694,6 +797,7 @@ export type HubUpdateWithoutRidersInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   merchant?: Prisma.MerchantUpdateOneWithoutHubsNestedInput
   parcels?: Prisma.ParcelUpdateManyWithoutCurrentHubNestedInput
+  managers?: Prisma.UserUpdateManyWithoutManagedHubNestedInput
   branch?: Prisma.WarehouseBranchUpdateOneWithoutHubsNestedInput
   fromTransfers?: Prisma.HubTransferUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUpdateManyWithoutToHubNestedInput
@@ -709,6 +813,7 @@ export type HubUncheckedUpdateWithoutRidersInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parcels?: Prisma.ParcelUncheckedUpdateManyWithoutCurrentHubNestedInput
+  managers?: Prisma.UserUncheckedUpdateManyWithoutManagedHubNestedInput
   fromTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutToHubNestedInput
 }
@@ -722,6 +827,7 @@ export type HubCreateWithoutParcelsInput = {
   isActive?: boolean
   merchant?: Prisma.MerchantCreateNestedOneWithoutHubsInput
   riders?: Prisma.RiderCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserCreateNestedManyWithoutManagedHubInput
   branch?: Prisma.WarehouseBranchCreateNestedOneWithoutHubsInput
   fromTransfers?: Prisma.HubTransferCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferCreateNestedManyWithoutToHubInput
@@ -737,6 +843,7 @@ export type HubUncheckedCreateWithoutParcelsInput = {
   isActive?: boolean
   branchId?: string | null
   riders?: Prisma.RiderUncheckedCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserUncheckedCreateNestedManyWithoutManagedHubInput
   fromTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutToHubInput
 }
@@ -766,6 +873,7 @@ export type HubUpdateWithoutParcelsInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   merchant?: Prisma.MerchantUpdateOneWithoutHubsNestedInput
   riders?: Prisma.RiderUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUpdateManyWithoutManagedHubNestedInput
   branch?: Prisma.WarehouseBranchUpdateOneWithoutHubsNestedInput
   fromTransfers?: Prisma.HubTransferUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUpdateManyWithoutToHubNestedInput
@@ -781,6 +889,7 @@ export type HubUncheckedUpdateWithoutParcelsInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   riders?: Prisma.RiderUncheckedUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUncheckedUpdateManyWithoutManagedHubNestedInput
   fromTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutToHubNestedInput
 }
@@ -795,6 +904,7 @@ export type HubCreateWithoutFromTransfersInput = {
   merchant?: Prisma.MerchantCreateNestedOneWithoutHubsInput
   parcels?: Prisma.ParcelCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserCreateNestedManyWithoutManagedHubInput
   branch?: Prisma.WarehouseBranchCreateNestedOneWithoutHubsInput
   toTransfers?: Prisma.HubTransferCreateNestedManyWithoutToHubInput
 }
@@ -810,6 +920,7 @@ export type HubUncheckedCreateWithoutFromTransfersInput = {
   branchId?: string | null
   parcels?: Prisma.ParcelUncheckedCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderUncheckedCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserUncheckedCreateNestedManyWithoutManagedHubInput
   toTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutToHubInput
 }
 
@@ -828,6 +939,7 @@ export type HubCreateWithoutToTransfersInput = {
   merchant?: Prisma.MerchantCreateNestedOneWithoutHubsInput
   parcels?: Prisma.ParcelCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserCreateNestedManyWithoutManagedHubInput
   branch?: Prisma.WarehouseBranchCreateNestedOneWithoutHubsInput
   fromTransfers?: Prisma.HubTransferCreateNestedManyWithoutFromHubInput
 }
@@ -843,6 +955,7 @@ export type HubUncheckedCreateWithoutToTransfersInput = {
   branchId?: string | null
   parcels?: Prisma.ParcelUncheckedCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderUncheckedCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserUncheckedCreateNestedManyWithoutManagedHubInput
   fromTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutFromHubInput
 }
 
@@ -872,6 +985,7 @@ export type HubUpdateWithoutFromTransfersInput = {
   merchant?: Prisma.MerchantUpdateOneWithoutHubsNestedInput
   parcels?: Prisma.ParcelUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUpdateManyWithoutManagedHubNestedInput
   branch?: Prisma.WarehouseBranchUpdateOneWithoutHubsNestedInput
   toTransfers?: Prisma.HubTransferUpdateManyWithoutToHubNestedInput
 }
@@ -887,6 +1001,7 @@ export type HubUncheckedUpdateWithoutFromTransfersInput = {
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parcels?: Prisma.ParcelUncheckedUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUncheckedUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUncheckedUpdateManyWithoutManagedHubNestedInput
   toTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutToHubNestedInput
 }
 
@@ -911,6 +1026,7 @@ export type HubUpdateWithoutToTransfersInput = {
   merchant?: Prisma.MerchantUpdateOneWithoutHubsNestedInput
   parcels?: Prisma.ParcelUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUpdateManyWithoutManagedHubNestedInput
   branch?: Prisma.WarehouseBranchUpdateOneWithoutHubsNestedInput
   fromTransfers?: Prisma.HubTransferUpdateManyWithoutFromHubNestedInput
 }
@@ -926,6 +1042,7 @@ export type HubUncheckedUpdateWithoutToTransfersInput = {
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parcels?: Prisma.ParcelUncheckedUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUncheckedUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUncheckedUpdateManyWithoutManagedHubNestedInput
   fromTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutFromHubNestedInput
 }
 
@@ -939,6 +1056,7 @@ export type HubCreateWithoutBranchInput = {
   merchant?: Prisma.MerchantCreateNestedOneWithoutHubsInput
   parcels?: Prisma.ParcelCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserCreateNestedManyWithoutManagedHubInput
   fromTransfers?: Prisma.HubTransferCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferCreateNestedManyWithoutToHubInput
 }
@@ -953,6 +1071,7 @@ export type HubUncheckedCreateWithoutBranchInput = {
   isActive?: boolean
   parcels?: Prisma.ParcelUncheckedCreateNestedManyWithoutCurrentHubInput
   riders?: Prisma.RiderUncheckedCreateNestedManyWithoutHubInput
+  managers?: Prisma.UserUncheckedCreateNestedManyWithoutManagedHubInput
   fromTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutFromHubInput
   toTransfers?: Prisma.HubTransferUncheckedCreateNestedManyWithoutToHubInput
 }
@@ -1002,6 +1121,7 @@ export type HubUpdateWithoutMerchantInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   parcels?: Prisma.ParcelUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUpdateManyWithoutManagedHubNestedInput
   branch?: Prisma.WarehouseBranchUpdateOneWithoutHubsNestedInput
   fromTransfers?: Prisma.HubTransferUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUpdateManyWithoutToHubNestedInput
@@ -1017,6 +1137,7 @@ export type HubUncheckedUpdateWithoutMerchantInput = {
   branchId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   parcels?: Prisma.ParcelUncheckedUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUncheckedUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUncheckedUpdateManyWithoutManagedHubNestedInput
   fromTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutToHubNestedInput
 }
@@ -1051,6 +1172,7 @@ export type HubUpdateWithoutBranchInput = {
   merchant?: Prisma.MerchantUpdateOneWithoutHubsNestedInput
   parcels?: Prisma.ParcelUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUpdateManyWithoutManagedHubNestedInput
   fromTransfers?: Prisma.HubTransferUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUpdateManyWithoutToHubNestedInput
 }
@@ -1065,6 +1187,7 @@ export type HubUncheckedUpdateWithoutBranchInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   parcels?: Prisma.ParcelUncheckedUpdateManyWithoutCurrentHubNestedInput
   riders?: Prisma.RiderUncheckedUpdateManyWithoutHubNestedInput
+  managers?: Prisma.UserUncheckedUpdateManyWithoutManagedHubNestedInput
   fromTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutFromHubNestedInput
   toTransfers?: Prisma.HubTransferUncheckedUpdateManyWithoutToHubNestedInput
 }
@@ -1087,6 +1210,7 @@ export type HubUncheckedUpdateManyWithoutBranchInput = {
 export type HubCountOutputType = {
   parcels: number
   riders: number
+  managers: number
   fromTransfers: number
   toTransfers: number
 }
@@ -1094,6 +1218,7 @@ export type HubCountOutputType = {
 export type HubCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   parcels?: boolean | HubCountOutputTypeCountParcelsArgs
   riders?: boolean | HubCountOutputTypeCountRidersArgs
+  managers?: boolean | HubCountOutputTypeCountManagersArgs
   fromTransfers?: boolean | HubCountOutputTypeCountFromTransfersArgs
   toTransfers?: boolean | HubCountOutputTypeCountToTransfersArgs
 }
@@ -1125,6 +1250,13 @@ export type HubCountOutputTypeCountRidersArgs<ExtArgs extends runtime.Types.Exte
 /**
  * HubCountOutputType without action
  */
+export type HubCountOutputTypeCountManagersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UserWhereInput
+}
+
+/**
+ * HubCountOutputType without action
+ */
 export type HubCountOutputTypeCountFromTransfersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.HubTransferWhereInput
 }
@@ -1149,6 +1281,7 @@ export type HubSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = ru
   merchant?: boolean | Prisma.Hub$merchantArgs<ExtArgs>
   parcels?: boolean | Prisma.Hub$parcelsArgs<ExtArgs>
   riders?: boolean | Prisma.Hub$ridersArgs<ExtArgs>
+  managers?: boolean | Prisma.Hub$managersArgs<ExtArgs>
   branch?: boolean | Prisma.Hub$branchArgs<ExtArgs>
   fromTransfers?: boolean | Prisma.Hub$fromTransfersArgs<ExtArgs>
   toTransfers?: boolean | Prisma.Hub$toTransfersArgs<ExtArgs>
@@ -1197,6 +1330,7 @@ export type HubInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   merchant?: boolean | Prisma.Hub$merchantArgs<ExtArgs>
   parcels?: boolean | Prisma.Hub$parcelsArgs<ExtArgs>
   riders?: boolean | Prisma.Hub$ridersArgs<ExtArgs>
+  managers?: boolean | Prisma.Hub$managersArgs<ExtArgs>
   branch?: boolean | Prisma.Hub$branchArgs<ExtArgs>
   fromTransfers?: boolean | Prisma.Hub$fromTransfersArgs<ExtArgs>
   toTransfers?: boolean | Prisma.Hub$toTransfersArgs<ExtArgs>
@@ -1217,6 +1351,7 @@ export type $HubPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
     merchant: Prisma.$MerchantPayload<ExtArgs> | null
     parcels: Prisma.$ParcelPayload<ExtArgs>[]
     riders: Prisma.$RiderPayload<ExtArgs>[]
+    managers: Prisma.$UserPayload<ExtArgs>[]
     branch: Prisma.$WarehouseBranchPayload<ExtArgs> | null
     fromTransfers: Prisma.$HubTransferPayload<ExtArgs>[]
     toTransfers: Prisma.$HubTransferPayload<ExtArgs>[]
@@ -1627,6 +1762,7 @@ export interface Prisma__HubClient<T, Null = never, ExtArgs extends runtime.Type
   merchant<T extends Prisma.Hub$merchantArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Hub$merchantArgs<ExtArgs>>): Prisma.Prisma__MerchantClient<runtime.Types.Result.GetResult<Prisma.$MerchantPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   parcels<T extends Prisma.Hub$parcelsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Hub$parcelsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ParcelPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   riders<T extends Prisma.Hub$ridersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Hub$ridersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RiderPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  managers<T extends Prisma.Hub$managersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Hub$managersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   branch<T extends Prisma.Hub$branchArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Hub$branchArgs<ExtArgs>>): Prisma.Prisma__WarehouseBranchClient<runtime.Types.Result.GetResult<Prisma.$WarehouseBranchPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   fromTransfers<T extends Prisma.Hub$fromTransfersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Hub$fromTransfersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HubTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   toTransfers<T extends Prisma.Hub$toTransfersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Hub$toTransfersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HubTransferPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -2132,6 +2268,30 @@ export type Hub$ridersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs
   take?: number
   skip?: number
   distinct?: Prisma.RiderScalarFieldEnum | Prisma.RiderScalarFieldEnum[]
+}
+
+/**
+ * Hub.managers
+ */
+export type Hub$managersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User
+   */
+  select?: Prisma.UserSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the User
+   */
+  omit?: Prisma.UserOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+  orderBy?: Prisma.UserOrderByWithRelationInput | Prisma.UserOrderByWithRelationInput[]
+  cursor?: Prisma.UserWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UserScalarFieldEnum | Prisma.UserScalarFieldEnum[]
 }
 
 /**

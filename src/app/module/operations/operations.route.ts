@@ -12,9 +12,27 @@ import {
   postRider,
   postVehicle,
 } from "./controller.js";
+import { managedHubScope } from "./scope.js";
+import { assignManagerHub } from "./service.js";
 
 export const operationsRouter = Router();
 operationsRouter.use(authenticate);
+// A transfer destination directory exposes no parcel, customer or rider data.
+operationsRouter.get(
+  "/transfer-destinations",
+  authorize("ADMIN", "HUB_MANAGER"),
+  asyncHandler(async (_req, res) => {
+    return ok(
+      res,
+      await prisma.hub.findMany({
+        where: { isActive: true },
+        select: { id: true, name: true, code: true, city: true },
+        orderBy: { code: "asc" },
+        take: 100,
+      }),
+    );
+  }),
+);
 operationsRouter.get(
   "/hubs",
   authorize("ADMIN", "MERCHANT", "HUB_MANAGER"),
@@ -28,6 +46,7 @@ operationsRouter.get(
       await prisma.hub.findMany({
         where: {
           isActive: true,
+          ...(user.role === "HUB_MANAGER" ? managedHubScope(user.id) : {}),
           ...(user.role === "MERCHANT"
             ? { OR: [{ merchantId: user.merchantId }, { merchantId: null }] }
             : {}),
@@ -59,9 +78,7 @@ operationsRouter.get(
           ...(hubId ? { hubId } : {}),
           ...(user.role === "HUB_MANAGER"
             ? {
-                hub: {
-                  branch: { userBranches: { some: { userId: user.id } } },
-                },
+                hub: managedHubScope(user.id),
               }
             : {}),
         },
@@ -76,7 +93,43 @@ operationsRouter.get(
     );
   }),
 );
+operationsRouter.get(
+  "/inbound-transfers",
+  authorize("ADMIN", "HUB_MANAGER"),
+  asyncHandler(async (req, res) => {
+    const user = (req as AuthenticatedRequest).user;
+    if (!user) throw new AppError(401, "Authentication required");
+    const hub = user.role === "HUB_MANAGER"
+      ? await prisma.hub.findFirst({ where: managedHubScope(user.id), select: { id: true } })
+      : null;
+    if (user.role === "HUB_MANAGER" && !hub)
+      throw new AppError(403, "Assign this manager to a hub first");
+    const transfers = await prisma.hubTransfer.findMany({
+      where: { parcel: { status: "IN_TRANSIT" }, ...(hub ? { toHubId: hub.id } : {}) },
+      orderBy: { transferredAt: "desc" },
+      distinct: ["parcelId"],
+      take: 100,
+      select: {
+        id: true, parcelId: true, transferredAt: true,
+        fromHub: { select: { name: true, code: true } },
+        toHub: { select: { id: true, name: true, code: true } },
+        parcel: { select: { id: true, trackingNumber: true, status: true, createdAt: true } },
+      },
+    });
+    return ok(res, transfers);
+  }),
+);
 operationsRouter.use(authorize("ADMIN"));
+operationsRouter.patch(
+  "/hub-managers/:id/hub",
+  asyncHandler(async (req, res) => {
+    const actor = (req as AuthenticatedRequest).user;
+    if (!actor) throw new AppError(401, "Authentication required");
+    const userId = z.uuid().parse(req.params.id);
+    const { hubId } = z.object({ hubId: z.uuid() }).parse(req.body);
+    return ok(res, await assignManagerHub(userId, hubId, actor.id));
+  }),
+);
 operationsRouter.get(
   "/branches",
   asyncHandler(async (_req, res) =>

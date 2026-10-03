@@ -88,6 +88,18 @@ const actors = {
     role: "HUB_MANAGER" as const,
     merchantId: null,
   },
+  destinationManager: {
+    id: "destination-manager",
+    email: "destination@test.com",
+    role: "HUB_MANAGER" as const,
+    merchantId: null,
+  },
+  unassignedManager: {
+    id: "unassigned-manager",
+    email: "unassigned@test.com",
+    role: "HUB_MANAGER" as const,
+    merchantId: null,
+  },
   rider: {
     id: "rider-user",
     email: "rider@test.com",
@@ -121,6 +133,9 @@ const newParcel = () => ({
 let parcel = newParcel();
 let transfers: { toHubId: string; toHub: { name: string } }[] = [];
 let activeAssignment = false;
+let managerHubs: Record<string, string | null>;
+let localRiderAvailable = true;
+let localRiderStatus = "ACTIVE";
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -128,6 +143,13 @@ beforeEach(() => {
   parcel = newParcel();
   transfers = [];
   activeAssignment = false;
+  managerHubs = {
+    [actors.manager.id]: ids.origin,
+    [actors.destinationManager.id]: ids.destination,
+    [actors.unassignedManager.id]: null,
+  };
+  localRiderAvailable = true;
+  localRiderStatus = "ACTIVE";
   mocks.redis.eval.mockResolvedValue(1);
   db.$transaction.mockImplementation(async (fn) =>
     typeof fn === "function" ? fn(db) : Promise.all(fn),
@@ -138,6 +160,11 @@ beforeEach(() => {
   db.parcel.findFirst.mockImplementation(async ({ where }) => {
     if (where.merchantId && where.merchantId !== parcel.merchantId) return null;
     if (where.assignments && !activeAssignment) return null;
+    if (
+      where.currentHub?.managers &&
+      managerHubs[where.currentHub.managers.some.id] !== parcel.currentHubId
+    )
+      return null;
     return parcel;
   });
   db.parcel.findUnique.mockImplementation(async () => ({
@@ -156,16 +183,24 @@ beforeEach(() => {
     parcel = { ...parcel, ...data, updatedAt: new Date() };
     return { count: 1 };
   });
-  db.hub.findFirst.mockImplementation(async ({ where }) => ({
-    id: where.id,
-    name: "Test Hub",
-    branchId: null,
-  }));
+  db.hub.findFirst.mockImplementation(async ({ where }) => {
+    if (where.managers && managerHubs[where.managers.some.id] !== where.id)
+      return null;
+    return { id: where.id, name: "Test Hub", branchId: "shared-branch" };
+  });
+  db.user.findMany.mockResolvedValue([]);
   db.hubTransfer.create.mockImplementation(async ({ data }) => {
     transfers = [{ toHubId: data.toHubId, toHub: { name: "Destination" } }];
     return data;
   });
-  db.rider.findFirst.mockResolvedValue({ id: ids.rider });
+  db.rider.findFirst.mockImplementation(async ({ where }) =>
+    where.id === ids.rider &&
+    where.hubId === ids.destination &&
+    localRiderAvailable &&
+    localRiderStatus === "ACTIVE"
+      ? { id: ids.rider, hubId: ids.destination }
+      : null,
+  );
   db.userBranch.findFirst.mockResolvedValue({ userId: actors.manager.id });
   db.deliveryAssignment.create.mockImplementation(async ({ data }) => {
     activeAssignment = true;
@@ -206,7 +241,7 @@ describe("HTTP parcel workflow", () => {
       (
         await request(app)
           .post(`${base}/mark-arrived`)
-          .set("Authorization", auth("manager"))
+          .set("Authorization", auth("destinationManager"))
           .send({})
       ).status,
     ).toBe(200);
@@ -215,7 +250,7 @@ describe("HTTP parcel workflow", () => {
       (
         await request(app)
           .post(`${base}/assign-rider`)
-          .set("Authorization", auth("manager"))
+          .set("Authorization", auth("destinationManager"))
           .send({ riderId: ids.rider })
       ).status,
     ).toBe(201);
@@ -322,16 +357,15 @@ describe("HTTP parcel workflow", () => {
       (
         await request(app)
           .post(`/api/v1/parcels/${ids.parcel}/assign-rider`)
-          .set("Authorization", auth("manager"))
+          .set("Authorization", auth("destinationManager"))
           .send({ riderId: ids.rider })
       ).status,
     ).toBe(201);
   });
 
-  it("does not let a manager receive another branch's transfer", async () => {
+  it("does not let an origin manager receive another hub's transfer in the same branch", async () => {
     parcel.status = "IN_TRANSIT";
     transfers = [{ toHubId: ids.destination, toHub: { name: "Destination" } }];
-    db.userBranch.findFirst.mockResolvedValue(null);
     expect(
       (
         await request(app)
@@ -340,6 +374,237 @@ describe("HTTP parcel workflow", () => {
           .send({})
       ).status,
     ).toBe(403);
+  });
+});
+
+describe("exact hub manager authorization", () => {
+  it.each(["manager", "destinationManager", "unassignedManager"] as const)(
+    "lists only %s's hub parcels and scoped totals",
+    async (actor) => {
+      const rows = [
+        { ...parcel, currentHubId: ids.origin },
+        { ...parcel, id: "other-parcel", currentHubId: ids.destination },
+      ];
+      const scoped = (where: {
+        currentHub?: { managers?: { some: { id: string } } };
+      }) =>
+        rows.filter(
+          (row) =>
+            row.currentHubId ===
+            managerHubs[where.currentHub?.managers?.some.id ?? ""],
+        );
+      db.parcel.findMany.mockImplementation(async ({ where }) => scoped(where));
+      db.parcel.count.mockImplementation(
+        async ({ where }) => scoped(where).length,
+      );
+      const response = await request(app)
+        .get("/api/v1/parcels")
+        .set("Authorization", auth(actor));
+      expect(response.status).toBe(200);
+      expect(
+        response.body.data.items.map(
+          (row: { currentHubId: string }) => row.currentHubId,
+        ),
+      ).toEqual(
+        actor === "unassignedManager" ? [] : [managerHubs[actors[actor].id]],
+      );
+      expect(response.body.data.meta.total).toBe(
+        actor === "unassignedManager" ? 0 : 1,
+      );
+      expect(db.parcel.findMany.mock.calls[0]?.[0].where).toMatchObject({
+        currentHub: {
+          isActive: true,
+          managers: { some: { id: actors[actor].id, role: "HUB_MANAGER" } },
+        },
+      });
+    },
+  );
+
+  it("cannot assign a local rider to another hub's parcel even in the same branch", async () => {
+    parcel.status = "AT_HUB";
+    parcel.currentHubId = ids.destination;
+    const response = await request(app)
+      .post(`/api/v1/parcels/${parcel.id}/assign-rider`)
+      .set("Authorization", auth("manager"))
+      .send({ riderId: ids.rider });
+    expect(response.status).toBe(403);
+    expect(db.deliveryAssignment.create).not.toHaveBeenCalled();
+  });
+
+  it("cannot assign another hub's rider to its own parcel", async () => {
+    parcel.status = "AT_HUB";
+    parcel.currentHubId = ids.origin;
+    const response = await request(app)
+      .post(`/api/v1/parcels/${parcel.id}/assign-rider`)
+      .set("Authorization", auth("manager"))
+      .send({ riderId: ids.rider });
+    expect(response.status).toBe(404);
+    expect(db.rider.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: ids.rider,
+        hubId: ids.origin,
+        isAvailable: true,
+        status: "ACTIVE",
+      },
+    });
+    expect(db.deliveryAssignment.create).not.toHaveBeenCalled();
+  });
+
+  it.each(["unavailable", "inactive"])(
+    "cannot assign an %s local rider",
+    async (condition) => {
+      parcel.status = "AT_HUB";
+      parcel.currentHubId = ids.destination;
+      if (condition === "unavailable") localRiderAvailable = false;
+      else localRiderStatus = "INACTIVE";
+      expect(
+        (
+          await request(app)
+            .post(`/api/v1/parcels/${parcel.id}/assign-rider`)
+            .set("Authorization", auth("destinationManager"))
+            .send({ riderId: ids.rider })
+        ).status,
+      ).toBe(404);
+      expect(db.deliveryAssignment.create).not.toHaveBeenCalled();
+    },
+  );
+
+  it("cannot dispatch another hub's parcel", async () => {
+    parcel.status = "AT_HUB";
+    parcel.currentHubId = ids.destination;
+    expect(
+      (
+        await request(app)
+          .post(`/api/v1/parcels/${parcel.id}/dispatch`)
+          .set("Authorization", auth("manager"))
+          .send({ destinationHubId: ids.origin })
+      ).status,
+    ).toBe(403);
+    expect(db.hubTransfer.create).not.toHaveBeenCalled();
+  });
+
+  it("cannot change another hub's parcel status", async () => {
+    parcel.status = "AT_HUB";
+    parcel.currentHubId = ids.destination;
+    expect(
+      (
+        await request(app)
+          .patch(`/api/v1/parcels/${parcel.id}/status`)
+          .set("Authorization", auth("manager"))
+          .send({ status: "SORTING" })
+      ).status,
+    ).toBe(404);
+    expect(db.parcel.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("scopes rider lookup even when a different hubId is supplied", async () => {
+    db.rider.findMany.mockImplementation(async ({ where }) =>
+      managerHubs[where.hub.managers.some.id] === where.hubId
+        ? [{ id: ids.rider }]
+        : [],
+    );
+    const response = await request(app)
+      .get(`/api/v1/operations/riders?hubId=${ids.destination}`)
+      .set("Authorization", auth("manager"));
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual([]);
+    expect(db.rider.findMany.mock.calls[0]?.[0].where).toMatchObject({
+      hubId: ids.destination,
+      hub: { managers: { some: { id: actors.manager.id } } },
+    });
+  });
+
+  it("does not notify other managers in the same branch", async () => {
+    db.user.findMany.mockResolvedValue([{ id: actors.manager.id }]);
+    expect(
+      (
+        await request(app)
+          .post(`/api/v1/parcels/${parcel.id}/assign-origin-hub`)
+          .set("Authorization", auth("merchant"))
+          .send({ hubId: ids.origin })
+      ).status,
+    ).toBe(200);
+    expect(db.user.findMany).toHaveBeenCalledWith({
+      where: { role: "HUB_MANAGER", managedHubId: ids.origin },
+      select: { id: true },
+    });
+  });
+
+  it("requires a concrete hub when creating a manager", async () => {
+    const response = await request(app)
+      .post("/api/v1/operations/hub-managers")
+      .set("Authorization", auth("admin"))
+      .send({
+        email: "new@test.com",
+        name: "Manager",
+        password: "Password123!",
+        branchId: ids.origin,
+      });
+    expect(response.status).toBe(400);
+    expect(db.user.create).not.toHaveBeenCalled();
+  });
+
+  it("creates a manager assigned to one hub", async () => {
+    db.user.create.mockImplementation(async ({ data }) => ({
+      id: "new-manager",
+      ...data,
+    }));
+    const response = await request(app)
+      .post("/api/v1/operations/hub-managers")
+      .set("Authorization", auth("admin"))
+      .send({
+        email: "new@test.com",
+        name: "Manager",
+        password: "Password123!",
+        hubId: ids.origin,
+      });
+    expect(response.status).toBe(201);
+    expect(db.user.create.mock.calls[0]?.[0].data).toMatchObject({
+      role: "HUB_MANAGER",
+      managedHubId: ids.origin,
+    });
+    expect(response.body.data.hubId).toBe(ids.origin);
+    expect(response.body.data.passwordHash).toBeUndefined();
+  });
+
+  it("returns only its own hub from the manager hub lookup", async () => {
+    db.hub.findMany.mockImplementation(async ({ where }) => [
+      { id: managerHubs[where.managers.some.id] },
+    ]);
+    const response = await request(app)
+      .get("/api/v1/operations/hubs")
+      .set("Authorization", auth("manager"));
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual([{ id: ids.origin }]);
+    expect(db.hub.findMany.mock.calls[0]?.[0].where).toMatchObject({
+      isActive: true,
+      managers: { some: { id: actors.manager.id } },
+    });
+  });
+
+  it("allows only admin to change manager hub mapping", async () => {
+    const path = `/api/v1/operations/hub-managers/${ids.customer}/hub`;
+    expect(
+      (
+        await request(app)
+          .patch(path)
+          .set("Authorization", auth("manager"))
+          .send({ hubId: ids.origin })
+      ).status,
+    ).toBe(403);
+    db.user.updateMany.mockResolvedValue({ count: 1 });
+    expect(
+      (
+        await request(app)
+          .patch(path)
+          .set("Authorization", auth("admin"))
+          .send({ hubId: ids.origin })
+      ).status,
+    ).toBe(200);
+    expect(db.user.updateMany).toHaveBeenCalledWith({
+      where: { id: ids.customer, role: "HUB_MANAGER" },
+      data: { managedHubId: ids.origin },
+    });
   });
 });
 

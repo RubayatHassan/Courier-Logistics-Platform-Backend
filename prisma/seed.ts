@@ -86,11 +86,32 @@ const vehicle = await prisma.vehicle.upsert({
 });
 const hubManagerUser = await prisma.user.upsert({
   where: { email: "hubmanager@example.com" },
-  update: { role: "HUB_MANAGER", emailVerifiedAt: new Date() },
+  update: {
+    role: "HUB_MANAGER",
+    managedHubId: hub.id,
+    emailVerifiedAt: new Date(),
+  },
   create: {
     email: "hubmanager@example.com",
     name: "Dhaka Hub Manager",
     role: "HUB_MANAGER",
+    managedHubId: hub.id,
+    passwordHash,
+    emailVerifiedAt: new Date(),
+  },
+});
+const destinationManagerUser = await prisma.user.upsert({
+  where: { email: "destinationmanager@example.com" },
+  update: {
+    role: "HUB_MANAGER",
+    managedHubId: destinationHub.id,
+    emailVerifiedAt: new Date(),
+  },
+  create: {
+    email: "destinationmanager@example.com",
+    name: "Destination Hub Manager",
+    role: "HUB_MANAGER",
+    managedHubId: destinationHub.id,
     passwordHash,
     emailVerifiedAt: new Date(),
   },
@@ -134,13 +155,29 @@ const customer = await prisma.customer.upsert({
     email: "customer@example.com",
   },
 });
+await prisma.user.upsert({
+  where: { email: "customer@example.com" },
+  update: { role: "CUSTOMER", emailVerifiedAt: new Date() },
+  create: {
+    email: "customer@example.com",
+    name: "Demo Customer",
+    role: "CUSTOMER",
+    passwordHash,
+    emailVerifiedAt: new Date(),
+  },
+});
 console.log({
   demoPassword: "Password123!",
   merchant: { email: "merchant@example.com", id: merchant.id },
   customer: { id: customer.id },
+  customerPortal: { email: "customer@example.com" },
   originHub: { id: hub.id, code: hub.code },
   destinationHub: { id: destinationHub.id, code: destinationHub.code },
   hubManager: { email: "hubmanager@example.com" },
+  destinationHubManager: {
+    id: destinationManagerUser.id,
+    email: "destinationmanager@example.com",
+  },
   rider: { email: "rider@example.com" },
   vehicle: { id: vehicle.id, plateNumber: vehicle.plateNumber },
 });

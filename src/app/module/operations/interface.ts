@@ -22,7 +22,8 @@ export type HubManagerInput = {
   email: string;
   password: string;
   name: string;
-  branchId: string;
+  hubId: string;
+  branchId?: string;
 };
 export type RiderInput = {
   email: string;

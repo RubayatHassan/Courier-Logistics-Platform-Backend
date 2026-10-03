@@ -23,7 +23,10 @@ async function ensureSuperAdmin() {
 try {
   await connectRedis();
 } catch (error) {
-  console.warn("Redis unavailable; continuing without cache", error);
+  console.warn(
+    "Redis unavailable; cache is disabled and protected authentication actions will return 503. Check REDIS_URL and Redis availability.",
+    error,
+  );
 }
 try {
   await ensureSuperAdmin();

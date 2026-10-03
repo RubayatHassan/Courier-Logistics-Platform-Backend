@@ -9,7 +9,10 @@ const createCustomerSchema = z.object({
   merchantId: z.uuid().optional(),
   name: z.string().min(2),
   phone: z.string().min(7).max(20),
-  email: z.email().optional(),
+  email: z
+    .email()
+    .transform((value) => value.toLowerCase())
+    .optional(),
 });
 
 function getActor(req: Request) {
