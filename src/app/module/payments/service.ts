@@ -150,9 +150,9 @@ export async function refreshCheckoutStatus(sessionId: string) {
     } catch {
       throw new AppError(502, "Payment status is temporarily unavailable");
     }
-    const session = (await response.json().catch(() => null)) as
-      | CheckoutSession
-      | null;
+    const session = (await response
+      .json()
+      .catch(() => null)) as CheckoutSession | null;
     if (!response.ok || !session || session.id !== sessionId)
       throw new AppError(502, "Payment status is temporarily unavailable");
     if (session.status === "expired") {

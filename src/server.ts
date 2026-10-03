@@ -1,8 +1,8 @@
-import { app } from "./app.js";
 import { env } from "./app/config/env.js";
 import { prisma } from "./app/lib/prisma.js";
 import { connectRedis } from "./app/lib/redis.js";
 import { hashPassword } from "./app/middleware/auth.js";
+import { app } from "./app.js";
 
 async function ensureSuperAdmin() {
   if (!env.SUPER_ADMIN_EMAIL || !env.SUPER_ADMIN_PASSWORD) return;

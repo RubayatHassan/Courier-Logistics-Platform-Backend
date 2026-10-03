@@ -99,27 +99,63 @@ operationsRouter.get(
   asyncHandler(async (req, res) => {
     const user = (req as AuthenticatedRequest).user;
     if (!user) throw new AppError(401, "Authentication required");
-    const hub = user.role === "HUB_MANAGER"
-      ? await prisma.hub.findFirst({ where: managedHubScope(user.id), select: { id: true } })
-      : null;
+    const hub =
+      user.role === "HUB_MANAGER"
+        ? await prisma.hub.findFirst({
+            where: managedHubScope(user.id),
+            select: { id: true },
+          })
+        : null;
     if (user.role === "HUB_MANAGER" && !hub)
       throw new AppError(403, "Assign this manager to a hub first");
     const transfers = await prisma.hubTransfer.findMany({
-      where: { parcel: { status: "IN_TRANSIT" }, ...(hub ? { toHubId: hub.id } : {}) },
+      where: {
+        parcel: { status: "IN_TRANSIT" },
+        ...(hub ? { toHubId: hub.id } : {}),
+      },
       orderBy: { transferredAt: "desc" },
       distinct: ["parcelId"],
       take: 100,
       select: {
-        id: true, parcelId: true, transferredAt: true,
+        id: true,
+        parcelId: true,
+        transferredAt: true,
         fromHub: { select: { name: true, code: true } },
         toHub: { select: { id: true, name: true, code: true } },
-        parcel: { select: { id: true, trackingNumber: true, status: true, createdAt: true } },
+        parcel: {
+          select: {
+            id: true,
+            trackingNumber: true,
+            status: true,
+            createdAt: true,
+          },
+        },
       },
     });
     return ok(res, transfers);
   }),
 );
 operationsRouter.use(authorize("ADMIN"));
+operationsRouter.get(
+  "/hub-managers",
+  asyncHandler(async (_req, res) =>
+    ok(
+      res,
+      await prisma.user.findMany({
+        where: { role: "HUB_MANAGER" },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          managedHubId: true,
+          managedHub: { select: { id: true, name: true, code: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      }),
+    ),
+  ),
+);
 operationsRouter.patch(
   "/hub-managers/:id/hub",
   asyncHandler(async (req, res) => {

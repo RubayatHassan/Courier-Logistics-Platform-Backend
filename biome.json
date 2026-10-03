@@ -3,6 +3,13 @@
   "linter": { "enabled": true, "rules": { "recommended": true } },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!dist", "!node_modules", "!coverage", "!src/generated"]
+    "includes": [
+      "**",
+      "!dist",
+      "!node_modules",
+      "!coverage",
+      "!src/generated",
+      "!**/.vercel"
+    ]
   }
 }

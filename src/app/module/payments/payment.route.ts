@@ -9,8 +9,8 @@ import type { AuthenticatedRequest } from "../../utils/types.js";
 import {
   type CheckoutSession,
   createStripeCheckout,
-  refreshCheckoutStatus,
   reconcileCheckout,
+  refreshCheckoutStatus,
 } from "./service.js";
 
 const checkoutSchema = z.object({ parcelId: z.uuid() });
